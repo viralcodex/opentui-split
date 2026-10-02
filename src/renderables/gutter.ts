@@ -100,7 +100,6 @@ export class GutterRenderable extends BoxRenderable {
     }
   }
 
-  /** Reset grab state. Called by the parent when a drag ends. */
   release(): void {
     this.grabbed = false;
     this._ctx.setMousePointer(this.hovered ? this.resizeCursor : "default");

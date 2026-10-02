@@ -4,26 +4,29 @@ Draggable, resizable **split-pane** primitive for [OpenTUI](https://github.com/a
 
 Works three ways from one install:
 
-- **Core** (`opentui-split`) — the engine: drag handling, gutter hit-testing,
+- **Core** (`opentui-split`): drag handling, gutter hit-testing,
   and size conservation.
 - **React** (`opentui-split/react`) and **Solid** (`opentui-split/solid`) —
-  thin adapters that register `<split-pane>` / `<split_pane>` intrinsics on
+  thin adapters that register `<split_pane>` intrinsics on
   import.
 
 ## Install
 
 ```bash
 bun add opentui-split
-# OR
+```
+```bash
 npm i opentui-split
 ```
 
 ## Usage
 
 Every pane but the last is fixed-size and draggable; the last flexes to fill
-the remaining space, so the split always fills its container. Core users add
-panes with `addPane(pane, size, minSize)`. React and Solid users render normal
-box children and pass their sizes through `sizes` and `minSizes`.
+the remaining space, so the split always fills its container.
+
+Core users add panes with `addPane(pane, size, minSize)`.
+
+React and Solid users render normal box children and pass their sizes through `sizes` and `minSizes`.
 
 ### Core
 
@@ -81,25 +84,6 @@ export function Layout() {
 }
 ```
 
-Use `gutterOptions` from Core, React, or Solid to configure every generated
-gutter:
-
-```tsx
-<split-pane
-  gutterOptions={{
-    visible: true,
-    color: "#78c8ff",
-    glyphs: {
-      horizontal: "┃",
-      vertical: "━",
-    },
-  }}
->
-  <box id="left" />
-  <box id="right" />
-</split-pane>
-```
-
 > The intrinsics self-register on import. If a bundler strips the side effect,
 > call the exported `registerSplitPane()` once at startup — it's idempotent.
 
@@ -140,11 +124,9 @@ bun run test:dist
 
 ```bash
 bun examples/add-panes.ts
-bun examples/slot-carousel.ts
 ```
 
-`add-panes.ts` adds and removes panes at runtime. `slot-carousel.ts` combines
-animated content with live gutter resizing.
+`add-panes.ts` adds and removes panes at runtime.
 
 ## License
 
