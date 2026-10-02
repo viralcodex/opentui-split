@@ -1,0 +1,74 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "opentui-split",
+  "homepage": "https://github.com/viralcodex/opentui-split",
+  "items": [
+    {
+      "name": "core/split-pane",
+      "type": "registry:item",
+      "title": "Split Pane (Core)",
+      "description": "Editable imperative SplitPane skin built on the opentui-split packaged engine.",
+      "dependencies": ["@opentui/core@^0.5.9", "opentui-split@^0.1.0"],
+      "files": [
+        {
+          "path": "registry/split-pane/core.ts",
+          "type": "registry:file",
+          "target": "components/ui/split-pane.ts"
+        }
+      ],
+      "meta": {
+        "framework": "core",
+        "sourceOwnership": "consumer",
+        "updateStrategy": "shadcn-add"
+      }
+    },
+    {
+      "name": "react/split-pane",
+      "type": "registry:item",
+      "title": "Split Pane (React)",
+      "description": "Editable React SplitPane skin built on the opentui-split packaged engine.",
+      "dependencies": [
+        "@opentui/core@^0.5.9",
+        "@opentui/react@^0.5.9",
+        "opentui-split@^0.1.0",
+        "react@^19.2.8"
+      ],
+      "files": [
+        {
+          "path": "registry/split-pane/react.tsx",
+          "type": "registry:file",
+          "target": "components/ui/split-pane.tsx"
+        }
+      ],
+      "meta": {
+        "framework": "react",
+        "sourceOwnership": "consumer",
+        "updateStrategy": "shadcn-add"
+      }
+    },
+    {
+      "name": "solid/split-pane",
+      "type": "registry:item",
+      "title": "Split Pane (Solid)",
+      "description": "Editable Solid SplitPane skin built on the opentui-split packaged engine.",
+      "dependencies": [
+        "@opentui/core@^0.5.9",
+        "@opentui/solid@^0.5.9",
+        "opentui-split@^0.1.0",
+        "solid-js@^1.9.12"
+      ],
+      "files": [
+        {
+          "path": "registry/split-pane/solid.tsx",
+          "type": "registry:file",
+          "target": "components/ui/split-pane.tsx"
+        }
+      ],
+      "meta": {
+        "framework": "solid",
+        "sourceOwnership": "consumer",
+        "updateStrategy": "shadcn-add"
+      }
+    }
+  ]
+}
