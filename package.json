@@ -1,65 +1,89 @@
 {
   "name": "opentui-split",
   "version": "0.1.0",
-  "description": "Draggable, resizable split-pane primitive for OpenTUI — packaged behavior with a copy-in, editable skin.",
+  "description": "Draggable, resizable split-pane primitive for OpenTUI with Core, React, and Solid adapters.",
+  "keywords": [
+    "layout",
+    "opentui",
+    "resizable",
+    "split-pane",
+    "splitpane",
+    "terminal",
+    "tui"
+  ],
+  "homepage": "https://github.com/viralcodex/opentui-split#readme",
+  "bugs": {
+    "url": "https://github.com/viralcodex/opentui-split/issues"
+  },
   "license": "MIT",
   "author": "Aviral Shukla",
-  "homepage": "https://github.com/viralcodex/opentui-split#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/viralcodex/opentui-split.git"
   },
-  "bugs": {
-    "url": "https://github.com/viralcodex/opentui-split/issues"
-  },
-  "type": "module",
-  "keywords": [
-    "opentui",
-    "tui",
-    "split-pane",
-    "splitpane",
-    "resizable",
-    "layout",
-    "terminal"
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
-  "module": "./dist/index.js",
+  "type": "module",
+  "sideEffects": [
+    "./dist/react.js",
+    "./dist/solid.js"
+  ],
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./solid": {
+      "types": "./dist/solid.d.ts",
+      "import": "./dist/solid.js"
     }
   },
-  "files": [
-    "dist",
-    "registry",
-    "registry.json",
-    "README.md",
-    "LICENSE"
-  ],
-  "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "bun run clean && tsc -p tsconfig.build.json",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
+    "test": "bun test && bun test --preload @opentui/solid/preload ./tests/solid-children.solid.tsx",
     "test:dist": "bun scripts/test-dist.ts",
-    "prepublishOnly": "bun run typecheck && bun run test && bun run build && bun run test:dist"
-  },
-  "peerDependencies": {
-    "@opentui/core": "^0.5.9"
+    "prepublishOnly": "bun run format:check && bun run typecheck && bun run test && bun run build && bun run test:dist"
   },
   "devDependencies": {
     "@opentui/core": "^0.5.9",
     "@opentui/react": "^0.5.9",
     "@opentui/solid": "^0.5.9",
-    "@types/bun": "latest",
+    "@types/bun": "^1.4.0",
     "@types/node": "^26.4.0",
+    "@types/react": "^19.2.0",
     "@xterm/headless": "^6.0.0",
     "node-pty": "^1.1.0",
+    "oxfmt": "^0.71.0",
     "react": "^19.2.0",
     "solid-js": "^1.9.12",
     "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@opentui/core": "^0.5.9",
+    "@opentui/react": "^0.5.9",
+    "@opentui/solid": "^0.5.9"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/react": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    }
   },
   "engines": {
     "bun": ">=1.3.0",

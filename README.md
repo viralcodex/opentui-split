@@ -2,110 +2,143 @@
 
 Draggable, resizable **split-pane** primitive for [OpenTUI](https://github.com/anomalyco/opentui).
 
-```
-BEHAVIOR: packaged.   STYLE: yours.
-```
+Works three ways from one install:
 
-Ships in two halves, like shadcn/ui:
-
-- **Engine** (`opentui-split`, this npm package) — owns the difficult behavior:
-  drag handling, gutter hit-testing, and size conservation. Versioned; you get
-  fixes.
-- **Skin** (a copy-in *recipe*) — the editable presentation: gutter glyphs
-  (`│` / `─`), hover color, and the "draw only on hover" decision. You copy
-  it into your codebase with the shadcn CLI and own it outright.
-
-The engine is a thin base; the skin is where you make it yours.
+- **Core** (`opentui-split`) — the engine: drag handling, gutter hit-testing,
+  and size conservation.
+- **React** (`opentui-split/react`) and **Solid** (`opentui-split/solid`) —
+  thin adapters that register `<split-pane>` / `<split_pane>` intrinsics on
+  import.
 
 ## Install
 
-Add the engine package:
-
 ```bash
 bun add opentui-split
-# or: npm i opentui-split
+# OR
+npm i opentui-split
 ```
 
-Then copy the skin recipe for your framework into your project:
+`@opentui/core` is a peer dependency; add `@opentui/react` or `@opentui/solid`
+if you use those adapters. The package is ESM-only.
 
-```bash
-# core (imperative)
-bunx shadcn@latest add <registry-url>/r/core/split-pane.json
-# react
-bunx shadcn@latest add <registry-url>/r/react/split-pane.json
-# solid
-bunx shadcn@latest add <registry-url>/r/solid/split-pane.json
-```
-
-The recipe lands in `components/ui/split-pane.ts` (or `.tsx`) and imports its
-behavior from `opentui-split`. Edit that file freely — reinstalling with
-`shadcn add` never clobbers it without asking, and `--diff` shows upstream
-changes to merge.
-
-## Usage (core / imperative)
-
-```typescript
-import { SplitPaneRenderable } from "./components/ui/split-pane.js"
-
-const outer = new SplitPaneRenderable(renderer, { id: "outer", direction: "horizontal" })
-outer.addPane(sidebar, /* size */ 26, /* minSize */ 16)
-outer.addPane(mainArea, 80, 20)
-
-const right = new SplitPaneRenderable(renderer, { id: "right", direction: "vertical" })
-outer.addPane(right, 80, 20)
-right.addPane(top, 14, 5)
-right.addPane(bottom, 12, 4)
-```
+## Usage
 
 Every pane but the last is fixed-size and draggable; the last flexes to fill
-the remaining space, so the split always fills its container.
+the remaining space, so the split always fills its container. Core users add
+panes with `addPane(pane, size, minSize)`. React and Solid users render normal
+box children and pass their sizes through `sizes` and `minSizes`.
 
-## API
+`sizes`, `minSizes`, `direction`, `gutterSize`, and `gutterOptions` can be
+updated after creation, including through reactive React and Solid props.
+Sizes must be finite, non-negative numbers; `gutterSize` must be a positive
+integer. Fractional minimum sizes round up to the next terminal cell while
+dragging.
 
-`SplitPaneRenderable extends BoxRenderable`
+### Core
 
-- `new SplitPaneRenderable(ctx, { direction?, sizes?, minSizes?, gutterSize?, onResize?, ...BoxOptions })`
-- `.addPane(pane, size?, minSize?)` — register a pane; inserts a gutter before all but the first.
+```typescript
+import { SplitPaneRenderable } from "opentui-split";
 
-`GutterRenderable extends BoxRenderable` — the mouse-plumbing base. Draws nothing;
-the skin subclass (`SplitGutterRenderable`) supplies rendering. Override
-`SplitPaneRenderable.createGutter()` to swap in your own gutter.
+const outer = new SplitPaneRenderable(renderer, {
+  id: "outer",
+  direction: "horizontal",
+  onSizesChange: (sizes) => saveLayout(sizes),
+});
+outer.addPane(sidebar, /* size */ 26, /* minSize */ 16);
+outer.addPane(mainArea, 80, 20);
+
+const right = new SplitPaneRenderable(renderer, { id: "right", direction: "vertical" });
+outer.addPane(right, 80, 20);
+right.addPane(top, 14, 5);
+right.addPane(bottom, 12, 4);
+```
+
+### React
+
+Render normal OpenTUI elements as children. The split pane inserts and removes
+gutters as React children mount, move, or unmount:
+
+```tsx
+/** @jsxImportSource @opentui/react */
+import "opentui-split/react";
+
+export function Layout() {
+  return (
+    <split-pane id="outer" direction="horizontal" sizes={[26, 80]} minSizes={[16, 20]}>
+      <box id="sidebar" border title="Navigation" />
+      <box id="main" border title="Content" />
+    </split-pane>
+  );
+}
+```
+
+### Solid
+
+Solid uses the same child and sizing model:
+
+```tsx
+/** @jsxImportSource @opentui/solid */
+import "opentui-split/solid";
+
+export function Layout() {
+  return (
+    <split_pane id="outer" direction="horizontal" sizes={[26, 80]} minSizes={[16, 20]}>
+      <box id="sidebar" border title="Navigation" />
+      <box id="main" border title="Content" />
+    </split_pane>
+  );
+}
+```
+
+Use `gutterOptions` from Core, React, or Solid to configure every generated
+gutter:
+
+```tsx
+<split-pane
+  gutterOptions={{
+    visible: true,
+    color: "#78c8ff",
+    glyphs: {
+      horizontal: "┃",
+      vertical: "━",
+    },
+  }}
+>
+  <box id="left" />
+  <box id="right" />
+</split-pane>
+```
+
+`glyphs.horizontal` is the divider used in a horizontal split;
+`glyphs.vertical` is used in a vertical split. `setGutterVisible()` updates
+existing gutters and the visibility of gutters created by later pane additions.
+`onSizesChange` receives the rendered integer pane sizes after a drag or
+container resize.
+
+> The intrinsics self-register on import. If a bundler strips the side effect,
+> call the exported `registerSplitPane()` once at startup — it's idempotent.
 
 ## Development
 
 ```bash
 bun install
-bun run typecheck   # type-check engine, skins, and tests
-bun test            # ports the original SplitPane behavior tests
-bun run build       # emit dist/ (JS + d.ts) from src/
-bun run test:dist   # smoke-test the built dist/ exports
-bun examples/demo.ts   # interactive demo (needs a TTY)
+bun run format
+bun run format:check
+bun run typecheck
+bun run test
+bun run build
+bun run test:dist
 ```
 
-`prepublishOnly` runs the full gate — `typecheck → test → build → test:dist` —
-so a broken build can never be published. The engine ships compiled from
-`dist/`; the skins ship as raw source under `registry/` for the shadcn CLI to
-copy in.
-
-## Demos
-
-All need a TTY (run in a real terminal):
+## Examples
 
 ```bash
-bun examples/demo.ts           # the base draggable/resizable split
-bun examples/add-panes.ts      # grow the layout at runtime: ＋ splits a pane, ✕ deletes
-bun examples/slot-carousel.ts  # logo-jackpot: three reels spin and land on the wordmark
+bun examples/add-panes.ts
+bun examples/slot-carousel.ts
 ```
 
-`slot-carousel.ts` takes the add-panes layout — a row of equal-width columns, each
-a stack of bordered "pane" boxes — and makes the boxes *move*. The logo
-(`opentui.png`) is trimmed to its wordmark and cut into one vertical slice per
-column, so the pieces reassemble left→right into the whole logo. Each column (a
-`CarouselColumn`) drifts gently at rest; SPACE (or the opening auto-spin) fires a
-jackpot — every column whooshes fast, then eases down and stops left→right so the
-slices land on a shared payline and snap into one logo. The boxes are real
-renderables clipped to their column (`overflow: "hidden"` + `translateY`), and the
-columns live in `SplitPaneRenderable`, so dragging the gutters resizes them live.
+`add-panes.ts` adds and removes panes at runtime. `slot-carousel.ts` combines
+animated content with live gutter resizing.
 
 ## License
 

@@ -22,6 +22,6 @@
       "opentui-split": ["./src/index.ts"]
     }
   },
-  "include": ["src/**/*.ts", "registry/**/*.ts", "registry/**/*.tsx", "tests/**/*.ts"],
-  "exclude": ["dist", "examples"]
+  "include": ["src/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx", "examples/**/*.ts"],
+  "exclude": ["dist"]
 }

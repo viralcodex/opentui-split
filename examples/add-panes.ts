@@ -13,6 +13,8 @@
  * one side and a fresh "pane <x>" on the other. Both are draggable via the
  * gutter, and each new pane gets its own ＋ button, so you can keep subdividing.
  *
+ * The gutters draw themselves; press `g` to hide/show them.
+ *
  * How it stays simple: each position in the tree is a `slot` (a plain Box). A
  * slot holds EITHER a leaf (the bordered "pane <x>" box) or a nested SplitPane.
  * Splitting a leaf never touches its parent — we just create a fresh SplitPane
@@ -28,28 +30,28 @@ import {
   TextRenderable,
   type KeyEvent,
   type MouseEvent,
-} from "@opentui/core"
-import { SplitPaneRenderable } from "../registry/split-pane/core.js"
+} from "@opentui/core";
+import { SplitPaneRenderable } from "../src/index.ts";
 
 /** Minimal standalone demo keybindings (console toggle, debug overlay). */
 function setupCommonDemoKeys(renderer: CliRenderer): void {
   renderer.keyInput.on("keypress", (key: KeyEvent) => {
-    if (key.name === "`" || key.name === '"') renderer.console.toggle()
-    else if (key.name === ".") renderer.toggleDebugOverlay()
-  })
+    if (key.name === "`" || key.name === '"') renderer.console.toggle();
+    else if (key.name === ".") renderer.toggleDebugOverlay();
+  });
 }
 
 // --- Theme ------------------------------------------------------------------
-const PANE_BORDER = RGBA.fromInts(90, 90, 110)
-const TEXT_FG = RGBA.fromInts(220, 220, 230)
-const MUTED_FG = RGBA.fromInts(150, 150, 165)
-const ACCENT = RGBA.fromInts(120, 200, 255)
-const ACCENT_FG = RGBA.fromInts(18, 18, 28)
-const DELETE_BG = RGBA.fromInts(210, 90, 90)
-const DELETE_FG = RGBA.fromInts(28, 12, 14)
-const MENU_BG = RGBA.fromInts(34, 38, 54)
-const MENU_HOVER_BG = RGBA.fromInts(50, 90, 140)
-const BACKGROUND = RGBA.fromInts(18, 18, 28)
+const PANE_BORDER = RGBA.fromInts(90, 90, 110);
+const TEXT_FG = RGBA.fromInts(220, 220, 230);
+const MUTED_FG = RGBA.fromInts(150, 150, 165);
+const ACCENT = RGBA.fromInts(120, 200, 255);
+const ACCENT_FG = RGBA.fromInts(18, 18, 28);
+const DELETE_BG = RGBA.fromInts(210, 90, 90);
+const DELETE_FG = RGBA.fromInts(28, 12, 14);
+const MENU_BG = RGBA.fromInts(34, 38, 54);
+const MENU_HOVER_BG = RGBA.fromInts(50, 90, 140);
+const BACKGROUND = RGBA.fromInts(18, 18, 28);
 
 /** A pleasant rotation of pane background tints so nested panes stay legible. */
 const PANE_TINTS = [
@@ -59,23 +61,23 @@ const PANE_TINTS = [
   RGBA.fromInts(40, 38, 26),
   RGBA.fromInts(26, 36, 30),
   RGBA.fromInts(38, 28, 34),
-]
+];
 
 // --- Layout constants -------------------------------------------------------
 /** Smallest pane extent (cells) — also the drag/split floor. */
-const MIN_PANE = 6
-const MENU_W = 20
-const MENU_H = 4
+const MIN_PANE = 6;
+const MENU_W = 20;
+const MENU_H = 4;
 
 // --- Stateless helpers ------------------------------------------------------
 
 /** A slot is a plain layout box (id "slot-<n>"); gutters/splits have suffixes. */
-const isSlot = (r: BoxRenderable): boolean => /^slot-\d+$/.test(r.id)
+const isSlot = (r: BoxRenderable): boolean => /^slot-\d+$/.test(r.id);
 
 /** Give a clickable renderable a pointer cursor while hovered. */
 function usesPointerCursor(renderer: CliRenderer, r: BoxRenderable): void {
-  r.onMouseOver = () => renderer.setMousePointer("pointer")
-  r.onMouseOut = () => renderer.setMousePointer("default")
+  r.onMouseOver = () => renderer.setMousePointer("pointer");
+  r.onMouseOut = () => renderer.setMousePointer("default");
 }
 
 /**
@@ -86,12 +88,12 @@ function usesPointerCursor(renderer: CliRenderer, r: BoxRenderable): void {
 function createIconButton(
   renderer: CliRenderer,
   opts: {
-    id: string
-    icon: string
-    corner: "bottom-right" | "top-right"
-    background: RGBA
-    foreground: RGBA
-    onPress: () => void
+    id: string;
+    icon: string;
+    corner: "bottom-right" | "top-right";
+    background: RGBA;
+    foreground: RGBA;
+    onPress: () => void;
   },
 ): BoxRenderable {
   const btn = new BoxRenderable(renderer, {
@@ -102,14 +104,20 @@ function createIconButton(
     backgroundColor: opts.background,
     paddingLeft: 1,
     paddingRight: 1,
-  })
-  btn.add(new TextRenderable(renderer, { id: `${opts.id}-icon`, content: opts.icon, fg: opts.foreground }))
+  });
+  btn.add(
+    new TextRenderable(renderer, {
+      id: `${opts.id}-icon`,
+      content: opts.icon,
+      fg: opts.foreground,
+    }),
+  );
   btn.onMouseDown = (event: MouseEvent) => {
-    event.stopPropagation()
-    opts.onPress()
-  }
-  usesPointerCursor(renderer, btn)
-  return btn
+    event.stopPropagation();
+    opts.onPress();
+  };
+  usesPointerCursor(renderer, btn);
+  return btn;
 }
 
 /**
@@ -118,15 +126,19 @@ function createIconButton(
  * mutation (split, delete, menu) goes through here.
  */
 class PaneLayout {
-  private paneCounter = 0
-  private slotSeq = 0
-  private menuSeq = 0
+  private paneCounter = 0;
+  private slotSeq = 0;
+  private menuSeq = 0;
 
   /** Leaf slots → their "pane <x>" number. Containers are absent from the map. */
-  private readonly paneNumber = new Map<BoxRenderable, number>()
+  private readonly paneNumber = new Map<BoxRenderable, number>();
+
+  /** Every live split, so `g` can toggle all their gutters at once. */
+  private readonly splits = new Set<SplitPaneRenderable>();
+  private guttersVisible = true;
 
   /** At most one orientation menu is open; opening/dismissing another clears it. */
-  private openMenu: { backdrop: BoxRenderable; menu: BoxRenderable } | null = null
+  private openMenu: { backdrop: BoxRenderable; menu: BoxRenderable } | null = null;
 
   constructor(
     private readonly renderer: CliRenderer,
@@ -135,7 +147,14 @@ class PaneLayout {
 
   /** Seed the stage with a single pane. The sole pane isn't deletable. */
   seed(): void {
-    this.stage.add(this.createSlot(++this.paneCounter, false))
+    this.stage.add(this.createSlot(++this.paneCounter, false));
+  }
+
+  /** Flip every split's gutter hairline on or off. Resizing works either way. */
+  toggleGutters(): void {
+    this.guttersVisible = !this.guttersVisible;
+    for (const split of this.splits) split.setGutterVisible(this.guttersVisible);
+    this.renderer.requestRender();
   }
 
   private createSlot(paneNo: number, deletable: boolean): BoxRenderable {
@@ -144,9 +163,9 @@ class PaneLayout {
       width: "100%",
       height: "100%",
       flexGrow: 1,
-    })
-    this.fillLeaf(slot, paneNo, deletable)
-    return slot
+    });
+    this.fillLeaf(slot, paneNo, deletable);
+    return slot;
   }
 
   /**
@@ -154,8 +173,8 @@ class PaneLayout {
    * split, and (unless it's the sole pane) a ✕ button to delete it.
    */
   private fillLeaf(slot: BoxRenderable, paneNo: number, deletable: boolean): void {
-    this.paneNumber.set(slot, paneNo)
-    const tint = PANE_TINTS[(paneNo - 1) % PANE_TINTS.length]
+    this.paneNumber.set(slot, paneNo);
+    const tint = PANE_TINTS[(paneNo - 1) % PANE_TINTS.length] ?? PANE_TINTS[0]!;
 
     const leaf = new BoxRenderable(this.renderer, {
       id: `${slot.id}-leaf`,
@@ -168,8 +187,14 @@ class PaneLayout {
       backgroundColor: tint,
       justifyContent: "center",
       alignItems: "center",
-    })
-    leaf.add(new TextRenderable(this.renderer, { id: `${slot.id}-label`, content: `pane ${paneNo}`, fg: TEXT_FG }))
+    });
+    leaf.add(
+      new TextRenderable(this.renderer, {
+        id: `${slot.id}-label`,
+        content: `pane ${paneNo}`,
+        fg: TEXT_FG,
+      }),
+    );
 
     leaf.add(
       createIconButton(this.renderer, {
@@ -180,7 +205,7 @@ class PaneLayout {
         foreground: ACCENT_FG,
         onPress: () => this.showMenu(slot, `${slot.id}-add`),
       }),
-    )
+    );
 
     // Only the sole pane lacks a ✕ — there's nothing to collapse into once it's
     // the last pane standing.
@@ -194,10 +219,10 @@ class PaneLayout {
           foreground: DELETE_FG,
           onPress: () => this.deleteSlot(slot),
         }),
-      )
+      );
     }
 
-    slot.add(leaf)
+    slot.add(leaf);
   }
 
   /**
@@ -206,15 +231,15 @@ class PaneLayout {
    * to its own parent is untouched — we only fill it with a fresh split.
    */
   private splitSlot(slot: BoxRenderable, direction: "horizontal" | "vertical"): void {
-    const keepNumber = this.paneNumber.get(slot)
-    if (keepNumber === undefined) return // already a container, ignore
+    const keepNumber = this.paneNumber.get(slot);
+    if (keepNumber === undefined) return; // already a container, ignore
 
     // Tear down the leaf currently in the slot; its number moves to slotA.
-    ;[...slot.getChildren()].forEach((c) => (c as BoxRenderable).destroyRecursively())
-    this.paneNumber.delete(slot)
+    [...slot.getChildren()].forEach((c) => (c as BoxRenderable).destroyRecursively());
+    this.paneNumber.delete(slot);
 
-    const span = direction === "horizontal" ? slot.width : slot.height
-    const half = Math.max(MIN_PANE, Math.floor(span / 2))
+    const span = direction === "horizontal" ? slot.width : slot.height;
+    const half = Math.max(MIN_PANE, Math.floor(span / 2));
 
     const split = new SplitPaneRenderable(this.renderer, {
       id: `${slot.id}-split`,
@@ -222,16 +247,18 @@ class PaneLayout {
       width: "100%",
       height: "100%",
       flexGrow: 1,
-    })
+    });
+    split.setGutterVisible(this.guttersVisible);
+    this.splits.add(split);
 
-    const slotA = this.createSlot(keepNumber, true) // original pane, kept — now deletable
-    const slotB = this.createSlot(++this.paneCounter, true) // new pane
+    const slotA = this.createSlot(keepNumber, true); // original pane, kept — now deletable
+    const slotB = this.createSlot(++this.paneCounter, true); // new pane
 
-    split.addPane(slotA, half, MIN_PANE) // fixed-size, draggable
-    split.addPane(slotB, half, MIN_PANE) // flexes to fill the rest
+    split.addPane(slotA, half, MIN_PANE); // fixed-size, draggable
+    split.addPane(slotB, half, MIN_PANE); // flexes to fill the rest
 
-    slot.add(split)
-    this.renderer.requestRender()
+    slot.add(split);
+    this.renderer.requestRender();
   }
 
   /**
@@ -243,48 +270,49 @@ class PaneLayout {
     // Earlier collapses can leave the leaf nested inside wrapper slots
     // (slot > slot > leaf). Climb to the slot that sits directly inside a
     // split — removing THAT is what collapses the split.
-    let slot = leafSlot
+    let slot = leafSlot;
     while (slot.parent && isSlot(slot.parent as BoxRenderable)) {
-      slot = slot.parent as BoxRenderable
+      slot = slot.parent as BoxRenderable;
     }
-    const split = slot.parent
-    if (!(split instanceof SplitPaneRenderable)) return // sole pane — nothing to collapse
-    const parentSlot = split.parent as BoxRenderable | null
-    if (!parentSlot) return
-    const sibling = (split.getChildren() as BoxRenderable[]).find((c) => c !== slot && isSlot(c))
-    if (!sibling) return
+    const split = slot.parent;
+    if (!(split instanceof SplitPaneRenderable)) return; // sole pane — nothing to collapse
+    const parentSlot = split.parent as BoxRenderable | null;
+    if (!parentSlot) return;
+    const sibling = (split.getChildren() as BoxRenderable[]).find((c) => c !== slot && isSlot(c));
+    if (!sibling) return;
 
     // Detach the sibling so tearing down the split doesn't take it with it, then
     // hand it (leaf or its own nested split — untouched) up to the parent slot.
-    split.remove(sibling)
-    parentSlot.remove(split)
-    split.destroyRecursively() // drops the deleted pane, its gutter, and this split's resize hook
-    this.paneNumber.delete(leafSlot)
+    split.remove(sibling);
+    parentSlot.remove(split);
+    this.splits.delete(split);
+    split.destroyRecursively(); // drops the deleted pane, its gutter, and this split's resize hook
+    this.paneNumber.delete(leafSlot);
 
     // The engine stamped a fixed size on the sibling when it was a pane (fixed
     // panes get an explicit width/height + flexGrow 0). Restore it to a plain
     // fill-the-slot box so it expands into the space the deleted pane vacated.
-    sibling.width = "100%"
-    sibling.height = "100%"
-    sibling.flexGrow = 1
-    sibling.flexShrink = 1
-    parentSlot.add(sibling)
+    sibling.width = "100%";
+    sibling.height = "100%";
+    sibling.flexGrow = 1;
+    sibling.flexShrink = 1;
+    parentSlot.add(sibling);
 
     // If only one pane is left in the whole layout, it's the sole pane now:
     // strip its ✕ so the last pane can't be deleted.
     if (this.paneNumber.size === 1) {
-      const [soleSlot] = this.paneNumber.keys()
-      soleSlot.findDescendantById(`${soleSlot.id}-del`)?.destroyRecursively()
+      const [soleSlot] = this.paneNumber.keys();
+      soleSlot?.findDescendantById(`${soleSlot.id}-del`)?.destroyRecursively();
     }
-    this.renderer.requestRender()
+    this.renderer.requestRender();
   }
 
   /** Pop the orientation menu next to the button (id `anchorId`) that was clicked. */
   private showMenu(slot: BoxRenderable, anchorId: string): void {
-    this.closeMenu()
+    this.closeMenu();
 
-    const anchor = slot.findDescendantById(anchorId) as BoxRenderable | undefined
-    if (!anchor) return
+    const anchor = slot.findDescendantById(anchorId) as BoxRenderable | undefined;
+    if (!anchor) return;
 
     // Full-screen catcher: any click outside the menu dismisses it.
     const backdrop = new BoxRenderable(this.renderer, {
@@ -295,18 +323,18 @@ class PaneLayout {
       width: "100%",
       height: "100%",
       zIndex: 1000,
-    })
+    });
     backdrop.onMouseDown = (event: MouseEvent) => {
-      event.stopPropagation()
-      this.closeMenu()
-    }
+      event.stopPropagation();
+      this.closeMenu();
+    };
 
     // Anchor the menu above the button, its right edge near the button, clamped
     // to stay on screen.
-    let left = clamp(anchor.x - MENU_W + 3, 0, this.renderer.width - MENU_W)
-    let top = anchor.y - MENU_H
-    if (top < 0) top = anchor.y + 1
-    top = clamp(top, 0, this.renderer.height - MENU_H)
+    let left = clamp(anchor.x - MENU_W + 3, 0, this.renderer.width - MENU_W);
+    let top = anchor.y - MENU_H;
+    if (top < 0) top = anchor.y + 1;
+    top = clamp(top, 0, this.renderer.height - MENU_H);
 
     const menu = new BoxRenderable(this.renderer, {
       id: `menu-${this.menuSeq++}`,
@@ -320,17 +348,17 @@ class PaneLayout {
       borderColor: ACCENT,
       backgroundColor: MENU_BG,
       flexDirection: "column",
-    })
+    });
 
     // Vertical gutter (│) → left|right → SplitPane direction "horizontal".
-    menu.add(this.createMenuOption(`${menu.id}-vertical`, "│  Vertical", slot, "horizontal"))
+    menu.add(this.createMenuOption(`${menu.id}-vertical`, "│  Vertical", slot, "horizontal"));
     // Horizontal gutter (─) → top/bottom → SplitPane direction "vertical".
-    menu.add(this.createMenuOption(`${menu.id}-horizontal`, "─  Horizontal", slot, "vertical"))
+    menu.add(this.createMenuOption(`${menu.id}-horizontal`, "─  Horizontal", slot, "vertical"));
 
-    this.renderer.root.add(backdrop)
-    this.renderer.root.add(menu)
-    this.openMenu = { backdrop, menu }
-    this.renderer.requestRender()
+    this.renderer.root.add(backdrop);
+    this.renderer.root.add(menu);
+    this.openMenu = { backdrop, menu };
+    this.renderer.requestRender();
   }
 
   private createMenuOption(
@@ -345,41 +373,41 @@ class PaneLayout {
       height: 1,
       paddingLeft: 1,
       backgroundColor: "transparent",
-    })
-    row.add(new TextRenderable(this.renderer, { id: `${id}-label`, content: label, fg: TEXT_FG }))
+    });
+    row.add(new TextRenderable(this.renderer, { id: `${id}-label`, content: label, fg: TEXT_FG }));
     row.onMouseDown = (event: MouseEvent) => {
-      event.stopPropagation()
-      this.closeMenu()
-      this.splitSlot(slot, direction)
-    }
+      event.stopPropagation();
+      this.closeMenu();
+      this.splitSlot(slot, direction);
+    };
     row.onMouseOver = () => {
-      row.backgroundColor = MENU_HOVER_BG
-      this.renderer.setMousePointer("pointer")
-    }
+      row.backgroundColor = MENU_HOVER_BG;
+      this.renderer.setMousePointer("pointer");
+    };
     row.onMouseOut = () => {
-      row.backgroundColor = "transparent"
-      this.renderer.setMousePointer("default")
-    }
-    return row
+      row.backgroundColor = "transparent";
+      this.renderer.setMousePointer("default");
+    };
+    return row;
   }
 
   private closeMenu(): void {
-    if (!this.openMenu) return
-    this.openMenu.backdrop.destroyRecursively()
-    this.openMenu.menu.destroyRecursively()
-    this.openMenu = null
-    this.renderer.requestRender()
+    if (!this.openMenu) return;
+    this.openMenu.backdrop.destroyRecursively();
+    this.openMenu.menu.destroyRecursively();
+    this.openMenu = null;
+    this.renderer.requestRender();
   }
 }
 
 /** Clamp `value` to the inclusive `[min, max]` range. */
 function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
+  return Math.max(min, Math.min(max, value));
 }
 
 export function run(renderer: CliRenderer): void {
-  renderer.start()
-  renderer.setBackgroundColor(BACKGROUND)
+  renderer.start();
+  renderer.setBackgroundColor(BACKGROUND);
 
   const root = new BoxRenderable(renderer, {
     id: "add-panes-root",
@@ -388,8 +416,8 @@ export function run(renderer: CliRenderer): void {
     flexDirection: "column",
     padding: 1,
     flexGrow: 1,
-  })
-  renderer.root.add(root)
+  });
+  renderer.root.add(root);
 
   // The layout tree lives inside this container. The very first slot fills it.
   const stage = new BoxRenderable(renderer, {
@@ -398,19 +426,26 @@ export function run(renderer: CliRenderer): void {
     flexGrow: 1,
     flexDirection: "column",
     marginTop: 1,
-  })
-  root.add(stage)
+  });
+  root.add(stage);
 
-  new PaneLayout(renderer, stage).seed()
+  const layout = new PaneLayout(renderer, stage);
+  layout.seed();
+
+  // `g` hides/shows every gutter hairline at runtime; pane borders keep the
+  // divider legible while hidden, and dragging still resizes.
+  renderer.keyInput.on("keypress", (key: KeyEvent) => {
+    if (key.name === "g") layout.toggleGutters();
+  });
 }
 
 export function destroy(renderer: CliRenderer): void {
-  renderer.clearFrameCallbacks()
-  renderer.root.getRenderable("add-panes-root")?.destroyRecursively()
+  renderer.clearFrameCallbacks();
+  renderer.root.getRenderable("add-panes-root")?.destroyRecursively();
 }
 
 if (import.meta.main) {
-  const renderer = await createCliRenderer({ exitOnCtrlC: true })
-  run(renderer)
-  setupCommonDemoKeys(renderer)
+  const renderer = await createCliRenderer({ exitOnCtrlC: true });
+  run(renderer);
+  setupCommonDemoKeys(renderer);
 }

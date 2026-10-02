@@ -1,0 +1,6 @@
+- always write the most extensible code with scope of future changes with little changes and low-coupling.
+- make sure to have a clear separation of concerns and well-defined interfaces.
+- Always update the readme after making changes to reflect new features, options, or usage instructions.
+- Less, simple and non-jargon comments in code.
+- If u have to justify your code with long comments, htat means your code is bad, think of simple logic instead.
+- You should aim to write less code to cover everything, and lesser verbose tests, preventing future surface area for bugs.

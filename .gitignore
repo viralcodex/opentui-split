@@ -2,7 +2,8 @@ node_modules
 dist
 *.log
 .DS_Store
-.png
+*.png
+.vscode/
 
 .env
 *.tsbuildinfo
