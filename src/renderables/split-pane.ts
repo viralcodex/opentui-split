@@ -5,24 +5,14 @@ import {
   type MouseEvent,
   type RenderContext,
 } from "@opentui/core";
-import {
-  GutterRenderable,
-  type GutterOptions,
-  type SplitDirection,
-  type SplitPaneGutterOptions,
-} from "./gutter.js";
-
-export interface SplitPaneOptions extends BoxOptions {
-  direction?: SplitDirection;
-  sizes?: number[];
-  minSizes?: number[];
-  gutterSize?: number;
-  onSizesChange?: (sizes: number[]) => void;
-  gutterOptions?: SplitPaneGutterOptions;
-}
-
-const DEFAULT_PANE_SIZE = 20;
-const DEFAULT_MIN_SIZE = 4;
+import { DefaultMinSize, DefaultPaneSize } from "../constants.js";
+import type {
+  GutterOptions,
+  SplitDirection,
+  SplitPaneGutterOptions,
+  SplitPaneOptions,
+} from "../models.js";
+import { GutterRenderable } from "./gutter.js";
 
 function validateSizes(name: string, values: number[] | null | undefined): number[] {
   if (values == null) return [];
@@ -155,7 +145,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     const sizes = validateSizes("sizes", values);
     this.pendingSizes = sizes;
     this.sizesState = this.panes.map(
-      (_, index) => sizes[index] ?? this.sizesState[index] ?? DEFAULT_PANE_SIZE,
+      (_, index) => sizes[index] ?? this.sizesState[index] ?? DefaultPaneSize,
     );
     this.applySizing();
     this.requestRender();
@@ -169,7 +159,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     const minSizes = validateSizes("minSizes", values);
     this.pendingMins = minSizes;
     this.minSizesState = this.panes.map(
-      (_, index) => minSizes[index] ?? this.minSizesState[index] ?? DEFAULT_MIN_SIZE,
+      (_, index) => minSizes[index] ?? this.minSizesState[index] ?? DefaultMinSize,
     );
   }
 
@@ -502,8 +492,8 @@ export class SplitPaneRenderable extends BoxRenderable {
     index = Math.max(0, Math.min(index, this.panes.length));
     this.shiftAuxiliaryChildren(index, 1);
     this.panes.splice(index, 0, pane);
-    this.sizesState.splice(index, 0, size ?? this.pendingSizes[index] ?? DEFAULT_PANE_SIZE);
-    this.minSizesState.splice(index, 0, minSize ?? this.pendingMins[index] ?? DEFAULT_MIN_SIZE);
+    this.sizesState.splice(index, 0, size ?? this.pendingSizes[index] ?? DefaultPaneSize);
+    this.minSizesState.splice(index, 0, minSize ?? this.pendingMins[index] ?? DefaultMinSize);
     this.rebuildChildren();
     return this.getChildren().indexOf(pane);
   }

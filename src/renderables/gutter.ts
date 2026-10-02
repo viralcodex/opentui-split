@@ -1,42 +1,15 @@
 import {
   BoxRenderable,
   MouseButton,
-  type BoxOptions,
   type MouseEvent,
   type MousePointerStyle,
   type OptimizedBuffer,
   parseColor,
-  RGBA,
+  type RGBA,
   type RenderContext,
 } from "@opentui/core";
-
-export type SplitDirection = "horizontal" | "vertical";
-
-export interface GutterGlyphs {
-  horizontal?: string;
-  vertical?: string;
-}
-
-export interface SplitPaneGutterOptions {
-  visible?: boolean;
-  glyphs?: GutterGlyphs;
-  color?: RGBA | string;
-}
-
-export interface GutterOptions extends Pick<BoxOptions, "id" | "width" | "height"> {
-  direction: SplitDirection;
-  onGrab: (event: MouseEvent) => void;
-  visible?: boolean;
-  glyphs?: GutterGlyphs;
-  color?: RGBA | string;
-}
-
-const DEFAULT_GUTTER_COLOR = RGBA.fromInts(120, 200, 255);
-const DEFAULT_GUTTER_GLYPHS: Required<GutterGlyphs> = {
-  horizontal: "│",
-  vertical: "─",
-};
-const TRANSPARENT = RGBA.fromInts(0, 0, 0, 0);
+import { DefaultGutterColor, DefaultGutterGlyphs, Transparent } from "../constants.js";
+import type { GutterOptions, SplitDirection } from "../models.js";
 
 /**
  * Thin divider between two panes.
@@ -67,8 +40,8 @@ export class GutterRenderable extends BoxRenderable {
     });
 
     this.direction = direction;
-    this.glyph = glyphs?.[direction] ?? DEFAULT_GUTTER_GLYPHS[direction];
-    this.color = color === undefined ? DEFAULT_GUTTER_COLOR : parseColor(color);
+    this.glyph = glyphs?.[direction] ?? DefaultGutterGlyphs[direction];
+    this.color = color === undefined ? DefaultGutterColor : parseColor(color);
     this.hairlineVisible = visible ?? true;
     this.resizeCursor = "crosshair";
 
@@ -118,11 +91,11 @@ export class GutterRenderable extends BoxRenderable {
 
     if (this.direction === "horizontal") {
       for (let y = 0; y < this.height; y++) {
-        buffer.setCellWithAlphaBlending(this.x, this.y + y, this.glyph, this.color, TRANSPARENT);
+        buffer.setCellWithAlphaBlending(this.x, this.y + y, this.glyph, this.color, Transparent);
       }
     } else {
       for (let x = 0; x < this.width; x++) {
-        buffer.setCellWithAlphaBlending(this.x + x, this.y, this.glyph, this.color, TRANSPARENT);
+        buffer.setCellWithAlphaBlending(this.x + x, this.y, this.glyph, this.color, Transparent);
       }
     }
   }
