@@ -18,21 +18,12 @@ bun add opentui-split
 npm i opentui-split
 ```
 
-`@opentui/core` is a peer dependency; add `@opentui/react` or `@opentui/solid`
-if you use those adapters. The package is ESM-only.
-
 ## Usage
 
 Every pane but the last is fixed-size and draggable; the last flexes to fill
 the remaining space, so the split always fills its container. Core users add
 panes with `addPane(pane, size, minSize)`. React and Solid users render normal
 box children and pass their sizes through `sizes` and `minSizes`.
-
-`sizes`, `minSizes`, `direction`, `gutterSize`, and `gutterOptions` can be
-updated after creation, including through reactive React and Solid props.
-Sizes must be finite, non-negative numbers; `gutterSize` must be a positive
-integer. Fractional minimum sizes round up to the next terminal cell while
-dragging.
 
 ### Core
 
@@ -109,14 +100,29 @@ gutter:
 </split-pane>
 ```
 
-`glyphs.horizontal` is the divider used in a horizontal split;
-`glyphs.vertical` is used in a vertical split. `setGutterVisible()` updates
-existing gutters and the visibility of gutters created by later pane additions.
-`onSizesChange` receives the rendered integer pane sizes after a drag or
-container resize.
-
 > The intrinsics self-register on import. If a bundler strips the side effect,
 > call the exported `registerSplitPane()` once at startup — it's idempotent.
+
+## API
+
+`SplitPaneOptions` includes all OpenTUI `BoxOptions` plus these options:
+
+| Option          | Type                         | Default        | Description                                                                  |
+| --------------- | ---------------------------- | -------------- | ---------------------------------------------------------------------------- |
+| `direction`     | `"horizontal" \| "vertical"` | `"horizontal"` | Pane layout direction.                                                       |
+| `sizes`         | `number[]`                   | `20` per pane  | Initial pane sizes in terminal cells. The last pane flexes to fill the rest. |
+| `minSizes`      | `number[]`                   | `4` per pane   | Minimum sizes used while dragging. Fractional values round up.               |
+| `gutterSize`    | `number`                     | `1`            | Gutter width or height in cells. Must be a positive integer.                 |
+| `gutterOptions` | `SplitPaneGutterOptions`     | See below      | Appearance and visibility shared by every generated gutter.                  |
+| `onSizesChange` | `(sizes: number[]) => void`  | None           | Called with integer pane sizes after a drag or container resize.             |
+
+#### `gutterOptions`
+
+| Option    | Type             | Default                              | Description                                               |
+| --------- | ---------------- | ------------------------------------ | --------------------------------------------------------- |
+| `visible` | `boolean`        | `true`                               | Shows the hairline. A hidden gutter remains draggable.    |
+| `color`   | `RGBA \| string` | `#78c8ff`                            | Any color accepted by OpenTUI.                            |
+| `glyphs`  | `GutterGlyphs`   | `{ horizontal: "│", vertical: "─" }` | Optional divider strings selected by the split direction. |
 
 ## Development
 
