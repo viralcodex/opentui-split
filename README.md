@@ -125,11 +125,6 @@ bun run check
 bun run build
 bun run test:dist
 ```
-
-Pushing a tag such as `v0.1.0` runs the same checks and creates a GitHub
-release with an npm package tarball attached. The tag must match the version in
-`package.json`.
-
 ## Examples
 
 ```bash
