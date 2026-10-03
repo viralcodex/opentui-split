@@ -4,3 +4,4 @@
 - Less, simple and non-jargon comments in code.
 - If u have to justify your code with long comments, htat means your code is bad, think of simple logic instead.
 - You should aim to write less code to cover everything, and lesser verbose tests, preventing future surface area for bugs.
+- README is for users to understand how to use the project, its features, and any relevant instructions, not about how to release and other irrelevant details.
