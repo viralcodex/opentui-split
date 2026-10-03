@@ -15,6 +15,7 @@ Works three ways from one install:
 ```bash
 bun add opentui-split
 ```
+
 ```bash
 npm i opentui-split
 ```
