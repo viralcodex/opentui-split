@@ -12,18 +12,18 @@ Works three ways from one install:
 
 ## Install
 
-Install the `v0.1.0` release directly from GitHub:
+Install the latest version directly from GitHub:
 
 ```bash
-npm install github:viralcodex/opentui-split#v0.1.0
+npm install github:viralcodex/opentui-split
 ```
 
 ```bash
-pnpm add github:viralcodex/opentui-split#v0.1.0
+pnpm add github:viralcodex/opentui-split
 ```
 
 ```bash
-bun add github:viralcodex/opentui-split#v0.1.0
+bun add github:viralcodex/opentui-split
 ```
 
 ## Usage
