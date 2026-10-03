@@ -1,0 +1,72 @@
+import { type BaseRenderable, BoxRenderable, type BoxOptions, type RenderContext } from "@opentui/core";
+import type { GutterOptions, SplitDirection, SplitPaneGutterOptions, SplitPaneOptions } from "../models.js";
+import { GutterRenderable } from "./gutter.js";
+export declare class SplitPaneRenderable extends BoxRenderable {
+    private _direction;
+    private _gutterSize;
+    private sizesState;
+    private minSizesState;
+    private resizeCallback;
+    private gutterVisible;
+    private gutterColor;
+    private gutterGlyphs;
+    private userMouseDrag;
+    private userMouseUp;
+    private userMouseDragEnd;
+    private panes;
+    private gutters;
+    private auxiliaryChildren;
+    private pendingSizes;
+    private pendingMins;
+    private activeGutter;
+    private dragStart;
+    private dragCurrent;
+    private dragLeftBasis;
+    private dragRightBasis;
+    private isDestroying;
+    private lastLayoutWidth;
+    private lastLayoutHeight;
+    constructor(ctx: RenderContext, options: SplitPaneOptions);
+    get direction(): SplitDirection;
+    set direction(value: SplitDirection | null | undefined);
+    get sizes(): number[];
+    set sizes(values: number[] | null | undefined);
+    get minSizes(): number[];
+    set minSizes(values: number[] | null | undefined);
+    get gutterSize(): number;
+    set gutterSize(value: number | null | undefined);
+    set gutterOptions(options: SplitPaneGutterOptions | null | undefined);
+    get onSizesChange(): ((sizes: number[]) => void) | undefined;
+    set onSizesChange(callback: ((sizes: number[]) => void) | null | undefined);
+    set onMouseDrag(handler: BoxOptions["onMouseDrag"] | undefined);
+    set onMouseUp(handler: BoxOptions["onMouseUp"] | undefined);
+    set onMouseDragEnd(handler: BoxOptions["onMouseDragEnd"] | undefined);
+    /** True when panes are laid out left-to-right (gutters are vertical hairlines). */
+    private get isHorizontal();
+    /** Read the coordinate (x or y) that moves the active gutter. */
+    private axisCoord;
+    /** Read a pane's extent along the split axis. */
+    private readExtent;
+    /** Write a pane's extent along the split axis without touching the cross axis. */
+    private writeExtent;
+    protected onResize(width: number, height: number): void;
+    protected createGutter(options: GutterOptions): GutterRenderable;
+    protected isAuxiliaryChild(_obj: unknown): _obj is BaseRenderable;
+    private setupDragHandling;
+    private grabGutter;
+    private captureBasis;
+    private paneSize;
+    private applySizing;
+    private applyBasis;
+    private handleLayoutResize;
+    private applyDrag;
+    add(obj: unknown, index?: number): number;
+    insertBefore(obj: unknown, anchor?: unknown): number;
+    remove(child: BaseRenderable): void;
+    addPane(pane: BoxRenderable, size?: number, minSize?: number): void;
+    private insertPane;
+    private shiftAuxiliaryChildren;
+    private rebuildChildren;
+    setGutterVisible(visible: boolean): void;
+    destroyRecursively(): void;
+}
