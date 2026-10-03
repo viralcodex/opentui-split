@@ -49,13 +49,16 @@
     }
   },
   "scripts": {
-    "build": "bun run clean && tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
+    "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "bun test && bun test --preload @opentui/solid/preload ./tests/solid-children.solid.tsx",
     "test:dist": "bun scripts/test-dist.ts",
-    "prepublishOnly": "bun run format:check && bun run typecheck && bun run test && bun run build && bun run test:dist"
+    "check": "bun run lint && bun run format:check && bun run typecheck && bun run test",
+    "prepare": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run check && bun run build && bun run test:dist"
   },
   "devDependencies": {
     "@opentui/core": "^0.5.9",
@@ -67,6 +70,7 @@
     "@xterm/headless": "^6.0.0",
     "node-pty": "^1.1.0",
     "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "react": "^19.2.0",
     "solid-js": "^1.9.12",
     "typescript": "^7.0.2"
