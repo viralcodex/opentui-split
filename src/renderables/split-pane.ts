@@ -53,13 +53,6 @@ function scaleSizes(sizes: number[], total: number): number[] {
   return scaled;
 }
 
-/**
- * Arranges child panes along one axis with draggable gutters between them.
- * Add `BoxRenderable` panes with `addPane()` or declarative framework children.
- *
- * This engine container owns drag and size-conservation math. Its gutters draw
- * a default hairline and can be customized through `gutterOptions`.
- */
 export class SplitPaneRenderable extends BoxRenderable {
   private _direction: SplitDirection;
   private _gutterSize: number;
@@ -476,6 +469,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     const validatedSize = size === undefined ? undefined : validateSizes("size", [size])[0];
     const validatedMin = minSize === undefined ? undefined : validateSizes("minSize", [minSize])[0];
     const currentIndex = this.panes.indexOf(pane);
+
     if (currentIndex >= 0) {
       const [currentSize] = this.sizesState.splice(currentIndex, 1);
       const [currentMin] = this.minSizesState.splice(currentIndex, 1);
@@ -490,11 +484,13 @@ export class SplitPaneRenderable extends BoxRenderable {
     }
 
     index = Math.max(0, Math.min(index, this.panes.length));
+
     this.shiftAuxiliaryChildren(index, 1);
     this.panes.splice(index, 0, pane);
     this.sizesState.splice(index, 0, size ?? this.pendingSizes[index] ?? DefaultPaneSize);
     this.minSizesState.splice(index, 0, minSize ?? this.pendingMins[index] ?? DefaultMinSize);
     this.rebuildChildren();
+
     return this.getChildren().indexOf(pane);
   }
 

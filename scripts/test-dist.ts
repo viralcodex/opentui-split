@@ -28,7 +28,7 @@ const required = [
 
 const missing = required.filter((file) => !existsSync(resolve(root, file)));
 if (missing.length > 0) {
-  console.error("✗ dist is missing expected files:");
+  console.error("dist is missing expected files:");
   for (const file of missing) console.error(`  - ${file}`);
   process.exit(1);
 }
@@ -37,7 +37,7 @@ const mod = (await import(resolve(root, "dist/index.js"))) as Record<string, unk
 const expectedExports = ["SplitPaneRenderable", "GutterRenderable"];
 const absent = expectedExports.filter((name) => typeof mod[name] !== "function");
 if (absent.length > 0) {
-  console.error(`✗ dist/index.js is missing exports: ${absent.join(", ")}`);
+  console.error(`dist/index.js is missing exports: ${absent.join(", ")}`);
   process.exit(1);
 }
 
@@ -82,7 +82,7 @@ try {
   }
 
   split.setGutterVisible(false);
-  if (gutter.showHairline !== false) {
+  if (gutter.showHairline) {
     throw new Error("dist split pane did not update gutter visibility");
   }
 
@@ -97,5 +97,5 @@ try {
 }
 
 console.log(
-  `✓ dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, react/solid adapters)`,
+  `dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, react/solid adapters)`,
 );

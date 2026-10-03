@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-
 /**
  * Add-panes demo — grow the layout at runtime.
  *
@@ -42,16 +40,15 @@ function setupCommonDemoKeys(renderer: CliRenderer): void {
 }
 
 // --- Theme ------------------------------------------------------------------
-const PANE_BORDER = RGBA.fromInts(90, 90, 110);
-const TEXT_FG = RGBA.fromInts(220, 220, 230);
-const MUTED_FG = RGBA.fromInts(150, 150, 165);
-const ACCENT = RGBA.fromInts(120, 200, 255);
-const ACCENT_FG = RGBA.fromInts(18, 18, 28);
-const DELETE_BG = RGBA.fromInts(210, 90, 90);
-const DELETE_FG = RGBA.fromInts(28, 12, 14);
-const MENU_BG = RGBA.fromInts(34, 38, 54);
-const MENU_HOVER_BG = RGBA.fromInts(50, 90, 140);
-const BACKGROUND = RGBA.fromInts(18, 18, 28);
+const PaneBorder = RGBA.fromInts(90, 90, 110);
+const TextFg = RGBA.fromInts(220, 220, 230);
+const Accent = RGBA.fromInts(120, 200, 255);
+const AccentFg = RGBA.fromInts(18, 18, 28);
+const DeleteBg = RGBA.fromInts(210, 90, 90);
+const DeleteFg = RGBA.fromInts(28, 12, 14);
+const MenuBg = RGBA.fromInts(34, 38, 54);
+const MenuHoverBg = RGBA.fromInts(50, 90, 140);
+const Background = RGBA.fromInts(18, 18, 28);
 
 /** A pleasant rotation of pane background tints so nested panes stay legible. */
 const PANE_TINTS = [
@@ -183,7 +180,7 @@ class PaneLayout {
       flexGrow: 1,
       border: true,
       borderStyle: "rounded",
-      borderColor: PANE_BORDER,
+      borderColor: PaneBorder,
       backgroundColor: tint,
       justifyContent: "center",
       alignItems: "center",
@@ -192,7 +189,7 @@ class PaneLayout {
       new TextRenderable(this.renderer, {
         id: `${slot.id}-label`,
         content: `pane ${paneNo}`,
-        fg: TEXT_FG,
+        fg: TextFg,
       }),
     );
 
@@ -201,8 +198,8 @@ class PaneLayout {
         id: `${slot.id}-add`,
         icon: "＋",
         corner: "bottom-right",
-        background: ACCENT,
-        foreground: ACCENT_FG,
+        background: Accent,
+        foreground: AccentFg,
         onPress: () => this.showMenu(slot, `${slot.id}-add`),
       }),
     );
@@ -215,8 +212,8 @@ class PaneLayout {
           id: `${slot.id}-del`,
           icon: "✕",
           corner: "top-right",
-          background: DELETE_BG,
-          foreground: DELETE_FG,
+          background: DeleteBg,
+          foreground: DeleteFg,
           onPress: () => this.deleteSlot(slot),
         }),
       );
@@ -345,8 +342,8 @@ class PaneLayout {
       zIndex: 1001,
       border: true,
       borderStyle: "rounded",
-      borderColor: ACCENT,
-      backgroundColor: MENU_BG,
+      borderColor: Accent,
+      backgroundColor: MenuBg,
       flexDirection: "column",
     });
 
@@ -374,14 +371,14 @@ class PaneLayout {
       paddingLeft: 1,
       backgroundColor: "transparent",
     });
-    row.add(new TextRenderable(this.renderer, { id: `${id}-label`, content: label, fg: TEXT_FG }));
+    row.add(new TextRenderable(this.renderer, { id: `${id}-label`, content: label, fg: TextFg }));
     row.onMouseDown = (event: MouseEvent) => {
       event.stopPropagation();
       this.closeMenu();
       this.splitSlot(slot, direction);
     };
     row.onMouseOver = () => {
-      row.backgroundColor = MENU_HOVER_BG;
+      row.backgroundColor = MenuHoverBg;
       this.renderer.setMousePointer("pointer");
     };
     row.onMouseOut = () => {
@@ -407,7 +404,7 @@ function clamp(value: number, min: number, max: number): number {
 
 export function run(renderer: CliRenderer): void {
   renderer.start();
-  renderer.setBackgroundColor(BACKGROUND);
+  renderer.setBackgroundColor(Background);
 
   const root = new BoxRenderable(renderer, {
     id: "add-panes-root",

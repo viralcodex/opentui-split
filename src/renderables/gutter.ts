@@ -12,8 +12,6 @@ import { DefaultGutterColor, DefaultGutterGlyphs, Transparent } from "../constan
 import type { GutterOptions, SplitDirection } from "../models.js";
 
 /**
- * Thin divider between two panes.
- *
  * It only reports the grab (mousedown) to its SplitPane parent. The actual
  * drag is handled on the container, because a 1-cell gutter loses the cursor the
  * instant you move, and the renderer captures whatever is under the cursor at
