@@ -125,6 +125,7 @@ bun run check
 bun run build
 bun run test:dist
 ```
+
 ## Examples
 
 ```bash
