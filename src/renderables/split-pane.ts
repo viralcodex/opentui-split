@@ -77,10 +77,7 @@ export class SplitPaneRenderable extends BoxRenderable {
   private dragLeftBasis = 0;
   private dragRightBasis = 0;
   private isDestroying = false;
-  // Last layout size we scaled against, so a resize can grow/shrink every fixed
-  // pane proportionally instead of dumping the whole delta on the last one.
-  private lastLayoutWidth = 0;
-  private lastLayoutHeight = 0;
+  private lastLayoutSize: number;
 
   constructor(ctx: RenderContext, options: SplitPaneOptions) {
     const {
@@ -114,8 +111,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.userMouseUp = onMouseUp;
     this.userMouseDragEnd = onMouseDragEnd;
     this.setupDragHandling();
-    this.lastLayoutWidth = this.width;
-    this.lastLayoutHeight = this.height;
+    this.lastLayoutSize = this.isHorizontal ? this.width : this.height;
   }
 
   get direction(): SplitDirection {
@@ -126,6 +122,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     const direction = validateDirection(value);
     if (direction === this._direction) return;
     this._direction = direction;
+    this.lastLayoutSize = this.isHorizontal ? this.width : this.height;
     this.flexDirection = direction === "horizontal" ? "row" : "column";
     this.rebuildChildren();
   }
@@ -327,10 +324,9 @@ export class SplitPaneRenderable extends BoxRenderable {
   // dragging, but cannot be hard layout constraints when the container itself
   // becomes smaller than their sum.
   private handleLayoutResize(width: number, height: number): void {
-    const prev = this.isHorizontal ? this.lastLayoutWidth : this.lastLayoutHeight;
     const next = this.isHorizontal ? width : height;
-    this.lastLayoutWidth = width;
-    this.lastLayoutHeight = height;
+    const prev = this.lastLayoutSize;
+    this.lastLayoutSize = next;
     if (prev <= 0 || next === prev) return;
 
     const lastIndex = this.panes.length - 1;
@@ -394,36 +390,18 @@ export class SplitPaneRenderable extends BoxRenderable {
 
   override add(obj: unknown, index?: number): number {
     if (this.isAuxiliaryChild(obj)) {
-      const paneIndex =
-        index === undefined
-          ? this.panes.length
-          : this.getChildren()
-              .slice(0, index)
-              .filter((child) => this.panes.includes(child as BoxRenderable)).length;
-      this.auxiliaryChildren.set(obj, paneIndex);
+      this.auxiliaryChildren.set(obj, this.paneIndexAt(index));
       return super.add(obj, index);
     }
     if (!(obj instanceof BoxRenderable)) return -1;
 
-    const paneIndex =
-      index === undefined
-        ? this.panes.length
-        : this.getChildren()
-            .slice(0, index)
-            .filter((child) => this.panes.includes(child as BoxRenderable)).length;
-    return this.insertPane(obj, paneIndex);
+    return this.insertPane(obj, this.paneIndexAt(index));
   }
 
   override insertBefore(obj: unknown, anchor?: unknown): number {
     if (this.isAuxiliaryChild(obj)) {
       const anchorIndex = this.getChildren().findIndex((child) => child === anchor);
-      const paneIndex =
-        anchorIndex < 0
-          ? this.panes.length
-          : this.getChildren()
-              .slice(0, anchorIndex)
-              .filter((child) => this.panes.includes(child as BoxRenderable)).length;
-      this.auxiliaryChildren.set(obj, paneIndex);
+      this.auxiliaryChildren.set(obj, this.paneIndexAt(anchorIndex < 0 ? undefined : anchorIndex));
       return super.insertBefore(obj, anchor);
     }
     if (!(obj instanceof BoxRenderable)) return -1;
@@ -431,6 +409,13 @@ export class SplitPaneRenderable extends BoxRenderable {
 
     const paneIndex = this.panes.indexOf(anchor);
     return paneIndex < 0 ? this.add(obj) : this.insertPane(obj, paneIndex);
+  }
+
+  private paneIndexAt(childIndex?: number): number {
+    if (childIndex === undefined) return this.panes.length;
+    return this.getChildren()
+      .slice(0, childIndex)
+      .filter((child) => this.panes.includes(child as BoxRenderable)).length;
   }
 
   override remove(child: BaseRenderable): void {

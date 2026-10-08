@@ -24,8 +24,7 @@ export declare class SplitPaneRenderable extends BoxRenderable {
     private dragLeftBasis;
     private dragRightBasis;
     private isDestroying;
-    private lastLayoutWidth;
-    private lastLayoutHeight;
+    private lastLayoutSize;
     constructor(ctx: RenderContext, options: SplitPaneOptions);
     get direction(): SplitDirection;
     set direction(value: SplitDirection | null | undefined);
@@ -62,6 +61,7 @@ export declare class SplitPaneRenderable extends BoxRenderable {
     private applyDrag;
     add(obj: unknown, index?: number): number;
     insertBefore(obj: unknown, anchor?: unknown): number;
+    private paneIndexAt;
     remove(child: BaseRenderable): void;
     addPane(pane: BoxRenderable, size?: number, minSize?: number): void;
     private insertPane;
