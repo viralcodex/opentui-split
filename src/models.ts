@@ -1,4 +1,11 @@
-import type { BoxOptions, MouseEvent, RGBA } from "@opentui/core";
+import type {
+  BaseRenderable,
+  BoxOptions,
+  KeyEvent,
+  MouseEvent,
+  Renderable,
+  RGBA,
+} from "@opentui/core";
 
 export type SplitDirection = "horizontal" | "vertical";
 
@@ -28,4 +35,24 @@ export interface SplitPaneOptions extends BoxOptions {
   gutterSize?: number;
   onSizesChange?: (sizes: number[]) => void;
   gutterOptions?: SplitPaneGutterOptions;
+}
+
+export type PaneNavigation = "next" | "previous";
+export type PaneNavigatorKeymap = (event: KeyEvent) => PaneNavigation | undefined;
+
+export interface PaneNavigatorOptions {
+  root?: BaseRenderable;
+  keymap?: PaneNavigatorKeymap | false;
+  wrap?: boolean;
+  isPane?: (renderable: Renderable) => boolean;
+  onFocusChange?: (current: Renderable, previous: Renderable | null) => void;
+}
+
+export interface PaneNavigator {
+  readonly panes: Renderable[];
+  readonly current: Renderable | null;
+  focusNext(): void;
+  focusPrevious(): void;
+  focusPane(target: number | Renderable): void;
+  dispose(): void;
 }

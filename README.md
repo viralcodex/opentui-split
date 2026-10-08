@@ -94,6 +94,32 @@ export function Layout() {
 > The intrinsics self-register on import. If a bundler strips the side effect,
 > call the exported `registerSplitPane()` once at startup — it's idempotent.
 
+## Keyboard navigation
+
+`createPaneNavigator` moves focus through focusable panes with `Tab` and `Shift+Tab`.
+Set `focusedBorderColor` on each pane to show which one has focus.
+
+```typescript
+import { BoxRenderable } from "@opentui/core";
+import { createPaneNavigator } from "opentui-split";
+
+outer.addPane(new BoxRenderable(renderer, { focusable: true, focusedBorderColor: "#60a5fa" }));
+
+const navigator = createPaneNavigator(renderer);
+```
+
+Use `keymap` to map any OpenTUI key event to `"next"` or `"previous"`:
+
+```typescript
+const navigator = createPaneNavigator(renderer, {
+  keymap: (key) => (key.ctrl && key.name === "l" ? "next" : undefined),
+});
+```
+
+Set `keymap` to `false` for manual control, then call `focusNext()` or `focusPrevious()`.
+
+Call `dispose()` to unbind the keys.
+
 ## API
 
 `SplitPaneOptions` includes all OpenTUI `BoxOptions` plus these options:
@@ -115,6 +141,19 @@ export function Layout() {
 | `color`   | `RGBA \| string` | `#78c8ff`                            | Any color accepted by OpenTUI.                            |
 | `glyphs`  | `GutterGlyphs`   | `{ horizontal: "│", vertical: "─" }` | Optional divider strings selected by the split direction. |
 
+### `createPaneNavigator(renderer, options?)`
+
+Returns a `PaneNavigator` with `panes`, `current`, `focusNext()`,
+`focusPrevious()`, `focusPane(target)`, and `dispose()`.
+
+| Option          | Type                                                      | Default           | Description                                                 |
+| --------------- | --------------------------------------------------------- | ----------------- | ----------------------------------------------------------- |
+| `root`          | `BaseRenderable`                                          | Renderer root     | Subtree to search for panes.                                |
+| `keymap`        | `(event) => "next" \| "previous" \| undefined` \| `false` | `tab`/`shift+tab` | Maps key events to movement, or disables keyboard handling. |
+| `wrap`          | `boolean`                                                 | `true`            | Cycle past the first and last pane.                         |
+| `isPane`        | `(renderable) => boolean`                                 | Any focusable     | Which renderables count as panes.                           |
+| `onFocusChange` | `(current, previous) => void`                             | None              | Called after focus moves between panes.                     |
+
 ## Development
 
 ```bash
@@ -132,7 +171,8 @@ bun run test:dist
 bun examples/add-panes.ts
 ```
 
-`add-panes.ts` adds and removes panes at runtime.
+`add-panes.ts` adds and removes panes at runtime. Use `Tab` and `Shift+Tab` to move focus, `g`
+to toggle gutters, and `h` to toggle buttons and gutters together.
 
 ## License
 
