@@ -20,6 +20,8 @@ const required = [
   "dist/react.d.ts",
   "dist/solid.js",
   "dist/solid.d.ts",
+  "dist/pane-navigator.js",
+  "dist/pane-navigator.d.ts",
   "dist/renderables/split-pane.js",
   "dist/renderables/split-pane.d.ts",
   "dist/renderables/gutter.js",
@@ -34,7 +36,7 @@ if (missing.length > 0) {
 }
 
 const mod = (await import(resolve(root, "dist/index.js"))) as Record<string, unknown>;
-const expectedExports = ["SplitPaneRenderable", "GutterRenderable"];
+const expectedExports = ["SplitPaneRenderable", "GutterRenderable", "createPaneNavigator"];
 const absent = expectedExports.filter((name) => typeof mod[name] !== "function");
 if (absent.length > 0) {
   console.error(`dist/index.js is missing exports: ${absent.join(", ")}`);
@@ -92,10 +94,22 @@ try {
   if (first.width !== 40 || first.height !== 3) {
     throw new Error(`dist split pane direction update produced ${first.width}x${first.height}`);
   }
+
+  const createPaneNavigator = mod.createPaneNavigator as (
+    renderer: typeof setup.renderer,
+    options?: { keymap?: false },
+  ) => { focusNext(): void; current: BoxRenderable | null };
+  first.focusable = true;
+  second.focusable = true;
+  const navigator = createPaneNavigator(setup.renderer, { keymap: false });
+  navigator.focusNext();
+  if (navigator.current !== first) {
+    throw new Error("dist pane navigator did not focus the first pane");
+  }
 } finally {
   setup.renderer.destroy();
 }
 
 console.log(
-  `dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, react/solid adapters)`,
+  `dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, pane navigation, react/solid adapters)`,
 );

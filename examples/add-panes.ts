@@ -11,7 +11,10 @@
  * one side and a fresh "pane <x>" on the other. Both are draggable via the
  * gutter, and each new pane gets its own ＋ button, so you can keep subdividing.
  *
- * The gutters draw themselves; press `g` to hide/show them.
+ * Press `Tab` to cycle focus forward through the panes and `Shift+Tab` to go
+ * back; the focused pane glows with an accent border. The gutters draw
+ * themselves; press `g` to hide/show them. Press `h` for a clean view that
+ * hides the ＋/✕ buttons and the gutters together.
  *
  * How it stays simple: each position in the tree is a `slot` (a plain Box). A
  * slot holds EITHER a leaf (the bordered "pane <x>" box) or a nested SplitPane.
@@ -29,7 +32,7 @@ import {
   type KeyEvent,
   type MouseEvent,
 } from "@opentui/core";
-import { SplitPaneRenderable } from "../src/index.ts";
+import { createPaneNavigator, type PaneNavigator, SplitPaneRenderable } from "../src/index.ts";
 
 /** Minimal standalone demo keybindings (console toggle, debug overlay). */
 function setupCommonDemoKeys(renderer: CliRenderer): void {
@@ -40,31 +43,24 @@ function setupCommonDemoKeys(renderer: CliRenderer): void {
 }
 
 // --- Theme ------------------------------------------------------------------
-const PaneBorder = RGBA.fromInts(90, 90, 110);
-const TextFg = RGBA.fromInts(220, 220, 230);
-const Accent = RGBA.fromInts(120, 200, 255);
-const AccentFg = RGBA.fromInts(18, 18, 28);
-const DeleteBg = RGBA.fromInts(210, 90, 90);
-const DeleteFg = RGBA.fromInts(28, 12, 14);
-const MenuBg = RGBA.fromInts(34, 38, 54);
-const MenuHoverBg = RGBA.fromInts(50, 90, 140);
-const Background = RGBA.fromInts(18, 18, 28);
+const PaneBorder = RGBA.fromInts(44, 50, 64);
+const TextFg = RGBA.fromInts(226, 232, 240);
+const Accent = RGBA.fromInts(96, 165, 250);
+const AccentFg = RGBA.fromInts(8, 12, 20);
+const DeleteBg = RGBA.fromInts(239, 110, 110);
+const DeleteFg = RGBA.fromInts(20, 10, 12);
+const MenuBg = RGBA.fromInts(18, 22, 32);
+const MenuHoverBg = RGBA.fromInts(34, 52, 82);
+const Background = RGBA.fromInts(10, 12, 17);
 
-/** A pleasant rotation of pane background tints so nested panes stay legible. */
-const PANE_TINTS = [
-  RGBA.fromInts(24, 40, 40),
-  RGBA.fromInts(40, 30, 44),
-  RGBA.fromInts(30, 34, 48),
-  RGBA.fromInts(40, 38, 26),
-  RGBA.fromInts(26, 36, 30),
-  RGBA.fromInts(38, 28, 34),
-];
+const PaneBackground = RGBA.fromInts(13, 15, 21);
 
 // --- Layout constants -------------------------------------------------------
 /** Smallest pane extent (cells) — also the drag/split floor. */
 const MIN_PANE = 6;
 const MENU_W = 20;
 const MENU_H = 4;
+const navigators = new WeakMap<CliRenderer, PaneNavigator>();
 
 // --- Stateless helpers ------------------------------------------------------
 
@@ -134,6 +130,9 @@ class PaneLayout {
   private readonly splits = new Set<SplitPaneRenderable>();
   private guttersVisible = true;
 
+  private readonly buttons = new Set<BoxRenderable>();
+  private chromeVisible = true;
+
   /** At most one orientation menu is open; opening/dismissing another clears it. */
   private openMenu: { backdrop: BoxRenderable; menu: BoxRenderable } | null = null;
 
@@ -150,8 +149,30 @@ class PaneLayout {
   /** Flip every split's gutter hairline on or off. Resizing works either way. */
   toggleGutters(): void {
     this.guttersVisible = !this.guttersVisible;
-    for (const split of this.splits) split.setGutterVisible(this.guttersVisible);
+    this.updateGutters();
     this.renderer.requestRender();
+  }
+
+  toggleChrome(): void {
+    this.chromeVisible = !this.chromeVisible;
+    for (const btn of this.buttons) {
+      btn.visible = this.chromeVisible;
+    }
+    this.updateGutters();
+    this.renderer.requestRender();
+  }
+
+  private updateGutters(): void {
+    const visible = this.chromeVisible && this.guttersVisible;
+    for (const split of this.splits) split.setGutterVisible(visible);
+  }
+
+  private addButton(leaf: BoxRenderable, opts: Parameters<typeof createIconButton>[1]): void {
+    const btn = createIconButton(this.renderer, opts);
+    btn.visible = this.chromeVisible;
+    this.buttons.add(btn);
+    btn.once("destroyed", () => this.buttons.delete(btn));
+    leaf.add(btn);
   }
 
   private createSlot(paneNo: number, deletable: boolean): BoxRenderable {
@@ -171,8 +192,6 @@ class PaneLayout {
    */
   private fillLeaf(slot: BoxRenderable, paneNo: number, deletable: boolean): void {
     this.paneNumber.set(slot, paneNo);
-    const tint = PANE_TINTS[(paneNo - 1) % PANE_TINTS.length] ?? PANE_TINTS[0]!;
-
     const leaf = new BoxRenderable(this.renderer, {
       id: `${slot.id}-leaf`,
       width: "100%",
@@ -181,7 +200,9 @@ class PaneLayout {
       border: true,
       borderStyle: "rounded",
       borderColor: PaneBorder,
-      backgroundColor: tint,
+      focusedBorderColor: Accent,
+      focusable: true,
+      backgroundColor: PaneBackground,
       justifyContent: "center",
       alignItems: "center",
     });
@@ -193,30 +214,26 @@ class PaneLayout {
       }),
     );
 
-    leaf.add(
-      createIconButton(this.renderer, {
-        id: `${slot.id}-add`,
-        icon: "＋",
-        corner: "bottom-right",
-        background: Accent,
-        foreground: AccentFg,
-        onPress: () => this.showMenu(slot, `${slot.id}-add`),
-      }),
-    );
+    this.addButton(leaf, {
+      id: `${slot.id}-add`,
+      icon: "＋",
+      corner: "bottom-right",
+      background: Accent,
+      foreground: AccentFg,
+      onPress: () => this.showMenu(slot, `${slot.id}-add`),
+    });
 
     // Only the sole pane lacks a ✕ — there's nothing to collapse into once it's
     // the last pane standing.
     if (deletable) {
-      leaf.add(
-        createIconButton(this.renderer, {
-          id: `${slot.id}-del`,
-          icon: "✕",
-          corner: "top-right",
-          background: DeleteBg,
-          foreground: DeleteFg,
-          onPress: () => this.deleteSlot(slot),
-        }),
-      );
+      this.addButton(leaf, {
+        id: `${slot.id}-del`,
+        icon: "✕",
+        corner: "top-right",
+        background: DeleteBg,
+        foreground: DeleteFg,
+        onPress: () => this.deleteSlot(slot),
+      });
     }
 
     slot.add(leaf);
@@ -245,7 +262,7 @@ class PaneLayout {
       height: "100%",
       flexGrow: 1,
     });
-    split.setGutterVisible(this.guttersVisible);
+    split.setGutterVisible(this.chromeVisible && this.guttersVisible);
     this.splits.add(split);
 
     const slotA = this.createSlot(keepNumber, true); // original pane, kept — now deletable
@@ -429,14 +446,20 @@ export function run(renderer: CliRenderer): void {
   const layout = new PaneLayout(renderer, stage);
   layout.seed();
 
+  navigators.get(renderer)?.dispose();
+  navigators.set(renderer, createPaneNavigator(renderer));
+
   // `g` hides/shows every gutter hairline at runtime; pane borders keep the
   // divider legible while hidden, and dragging still resizes.
   renderer.keyInput.on("keypress", (key: KeyEvent) => {
     if (key.name === "g") layout.toggleGutters();
+    else if (key.name === "h") layout.toggleChrome();
   });
 }
 
 export function destroy(renderer: CliRenderer): void {
+  navigators.get(renderer)?.dispose();
+  navigators.delete(renderer);
   renderer.clearFrameCallbacks();
   renderer.root.getRenderable("add-panes-root")?.destroyRecursively();
 }
