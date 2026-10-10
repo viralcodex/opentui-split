@@ -38,6 +38,19 @@ function validateDirection(value: SplitDirection | null | undefined): SplitDirec
   return direction;
 }
 
+function validateOptionalSize(name: string, value: number | undefined): number | undefined {
+  return value === undefined ? undefined : validateSizes(name, [value])[0];
+}
+
+function resolveSize(
+  requested: number | undefined,
+  current: number | undefined,
+  pending: number | undefined,
+  fallback: number,
+): number {
+  return requested ?? current ?? pending ?? fallback;
+}
+
 function scaleSizes(sizes: number[], total: number): number[] {
   const previousTotal = sizes.reduce((sum, size) => sum + size, 0);
   if (sizes.length === 0 || previousTotal <= 0) return sizes.map(() => 0);
@@ -51,6 +64,13 @@ function scaleSizes(sizes: number[], total: number): number[] {
 
   for (let index = 0; index < remainder; index++) scaled[order[index]!.index]!++;
   return scaled;
+}
+
+function containsNode(parent: BaseRenderable, child: BaseRenderable): boolean {
+  for (let node = child.parent; node; node = node.parent) {
+    if (node === parent) return true;
+  }
+  return false;
 }
 
 export class SplitPaneRenderable extends BoxRenderable {
@@ -71,7 +91,7 @@ export class SplitPaneRenderable extends BoxRenderable {
   private auxiliaryChildren = new Map<BaseRenderable, number>();
   private pendingSizes: number[];
   private pendingMins: number[];
-  private activeGutter = -1; // gutter index currently being dragged
+  private activeGutter = -1;
   private dragStart = 0;
   private dragCurrent = 0;
   private dragLeftBasis = 0;
@@ -168,18 +188,24 @@ export class SplitPaneRenderable extends BoxRenderable {
     const visible = options?.visible ?? true;
     const color = options?.color;
     const glyphs = options?.glyphs;
-    if (
-      visible === this.gutterVisible &&
-      color === this.gutterColor &&
-      glyphs?.horizontal === this.gutterGlyphs?.horizontal &&
-      glyphs?.vertical === this.gutterGlyphs?.vertical
-    ) {
-      return;
-    }
+    if (this.hasGutterOptions(visible, color, glyphs)) return;
     this.gutterVisible = visible;
     this.gutterColor = color;
     this.gutterGlyphs = glyphs;
     this.rebuildChildren();
+  }
+
+  private hasGutterOptions(
+    visible: boolean,
+    color: GutterOptions["color"],
+    glyphs: GutterOptions["glyphs"],
+  ): boolean {
+    return (
+      visible === this.gutterVisible &&
+      color === this.gutterColor &&
+      glyphs?.horizontal === this.gutterGlyphs?.horizontal &&
+      glyphs?.vertical === this.gutterGlyphs?.vertical
+    );
   }
 
   get onSizesChange(): ((sizes: number[]) => void) | undefined {
@@ -202,22 +228,18 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.userMouseDragEnd = handler ?? undefined;
   }
 
-  /** True when panes are laid out left-to-right (gutters are vertical hairlines). */
   private get isHorizontal(): boolean {
     return this._direction === "horizontal";
   }
 
-  /** Read the coordinate (x or y) that moves the active gutter. */
   private axisCoord(event: MouseEvent): number {
     return this.isHorizontal ? event.x : event.y;
   }
 
-  /** Read a pane's extent along the split axis. */
   private readExtent(pane: BoxRenderable): number {
     return this.isHorizontal ? pane.width : pane.height;
   }
 
-  /** Write a pane's extent along the split axis without touching the cross axis. */
   private writeExtent(pane: BoxRenderable, size: number): void {
     if (this.isHorizontal) {
       pane.width = size;
@@ -239,10 +261,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     return false;
   }
 
-  // The container handles the drag, not the gutter: a 1-cell gutter loses the
-  // cursor immediately, so the renderer ends up capturing a neighbouring pane.
-  // That pane bubbles its drag/up events up to this container, which stays in
-  // the chain for the whole gesture.
+  // Drag events bubble through the split after the pointer leaves its 1-cell gutter.
   private setupDragHandling(): void {
     super.onMouseDrag = (event: MouseEvent) => {
       if (this.activeGutter >= 0) {
@@ -256,8 +275,6 @@ export class SplitPaneRenderable extends BoxRenderable {
     const end = (event: MouseEvent) => {
       if (this.activeGutter >= 0) {
         event.stopPropagation();
-        // Reset the dragged gutter (its own onMouseUp may not fire once the pointer
-        // has left the 1-cell strip) and restore its pointer for the hover state.
         this.gutters[this.activeGutter]?.release();
         this.activeGutter = -1;
       }
@@ -279,8 +296,6 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.captureBasis(gutterIndex);
   }
 
-  // Capture the fixed pane's basis and the neighbour's *actual* rendered size
-  // (works whether the neighbour is fixed or the flexible last pane).
   private captureBasis(gutterIndex: number): void {
     this.sizesState = this.panes.map((_, index) => this.paneSize(index));
     this.dragLeftBasis = this.paneSize(gutterIndex);
@@ -292,8 +307,6 @@ export class SplitPaneRenderable extends BoxRenderable {
     return pane ? this.readExtent(pane) : 0;
   }
 
-  // Every pane but the last is fixed-size and draggable; the last pane flexes to
-  // fill whatever space remains, so the split always fills its container.
   private applySizing(): void {
     const lastIndex = this.panes.length - 1;
 
@@ -320,14 +333,13 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.writeExtent(pane, this.sizesState[index] ?? 0);
   }
 
-  // Scale all panes to the space left after gutters. Minimums constrain direct
-  // dragging, but cannot be hard layout constraints when the container itself
-  // becomes smaller than their sum.
+  // Minimums constrain dragging, but the split may shrink below their sum.
   private handleLayoutResize(width: number, height: number): void {
     const next = this.isHorizontal ? width : height;
     const prev = this.lastLayoutSize;
     this.lastLayoutSize = next;
-    if (prev <= 0 || next === prev) return;
+    if (prev <= 0) return;
+    if (next === prev) return;
 
     const lastIndex = this.panes.length - 1;
     if (lastIndex < 0) return;
@@ -335,12 +347,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     const gutterSpace = this.gutters.length * this._gutterSize;
     const previousAvailable = Math.max(0, prev - gutterSpace);
     const nextAvailable = Math.max(0, next - gutterSpace);
-    const fixedTotal = this.panes
-      .slice(0, lastIndex)
-      .reduce((total, _, index) => total + this.paneSize(index), 0);
-    const previousSizes = this.panes.map((_, index) =>
-      index === lastIndex ? Math.max(0, previousAvailable - fixedTotal) : this.paneSize(index),
-    );
+    const previousSizes = this.sizesBeforeResize(previousAvailable, lastIndex);
     const previousTotal = previousSizes.reduce((total, size) => total + size, 0);
     if (previousTotal <= 0) return;
 
@@ -348,11 +355,7 @@ export class SplitPaneRenderable extends BoxRenderable {
 
     for (let index = 0; index < lastIndex; index++) this.applyBasis(index);
 
-    if (this.activeGutter >= 0) {
-      this.dragLeftBasis = this.sizesState[this.activeGutter] ?? 0;
-      this.dragRightBasis = this.sizesState[this.activeGutter + 1] ?? 0;
-      this.dragStart = this.dragCurrent;
-    }
+    this.resetActiveDragBasis();
 
     if (lastIndex > 0) {
       queueMicrotask(() => {
@@ -360,6 +363,22 @@ export class SplitPaneRenderable extends BoxRenderable {
       });
       this.resizeCallback?.([...this.sizesState]);
     }
+  }
+
+  private sizesBeforeResize(available: number, lastIndex: number): number[] {
+    const fixedTotal = this.panes
+      .slice(0, lastIndex)
+      .reduce((total, _, index) => total + this.paneSize(index), 0);
+    return this.panes.map((_, index) =>
+      index === lastIndex ? Math.max(0, available - fixedTotal) : this.paneSize(index),
+    );
+  }
+
+  private resetActiveDragBasis(): void {
+    if (this.activeGutter < 0) return;
+    this.dragLeftBasis = this.sizesState[this.activeGutter] ?? 0;
+    this.dragRightBasis = this.sizesState[this.activeGutter + 1] ?? 0;
+    this.dragStart = this.dragCurrent;
   }
 
   private applyDrag(gutterIndex: number, delta: number): void {
@@ -379,8 +398,6 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.sizesState[left] = newLeft;
     this.applyBasis(left);
     this.sizesState[right] = total - newLeft;
-    // If the right neighbour is a fixed pane, it gives up what left gained.
-    // If it's the flexible last pane, flexGrow absorbs the change automatically.
     if (right !== lastIndex) {
       this.applyBasis(right);
     }
@@ -450,38 +467,140 @@ export class SplitPaneRenderable extends BoxRenderable {
     this.insertPane(pane, this.panes.length, size, minSize);
   }
 
-  private insertPane(pane: BoxRenderable, index: number, size?: number, minSize?: number): number {
-    const validatedSize = size === undefined ? undefined : validateSizes("size", [size])[0];
-    const validatedMin = minSize === undefined ? undefined : validateSizes("minSize", [minSize])[0];
-    const currentIndex = this.panes.indexOf(pane);
+  // The panes in layout order (gutters and auxiliary children excluded).
+  get paneList(): BoxRenderable[] {
+    return [...this.panes];
+  }
 
-    if (currentIndex >= 0) {
-      const [currentSize] = this.sizesState.splice(currentIndex, 1);
-      const [currentMin] = this.minSizesState.splice(currentIndex, 1);
-      this.panes.splice(currentIndex, 1);
-      this.shiftAuxiliaryChildren(currentIndex, -1);
-      if (currentIndex < index) index--;
-      size = validatedSize ?? currentSize;
-      minSize = validatedMin ?? currentMin;
-    } else {
-      size = validatedSize;
-      minSize = validatedMin;
+  // Move a pane and its sizing state to a new index.
+  movePane(pane: BoxRenderable, toIndex: number): boolean {
+    const from = this.panes.indexOf(pane);
+    if (from < 0) return false;
+    if (!Number.isInteger(toIndex)) throw new TypeError("toIndex must be a finite integer");
+    const to = Math.max(0, Math.min(toIndex, this.panes.length - 1));
+    if (to === from) return false;
+
+    const last = this.panes.length - 1;
+    const flexibleSize = this.paneSize(last);
+    if (flexibleSize > 0) this.sizesState[last] = flexibleSize;
+    const [movedPane] = this.panes.splice(from, 1);
+    const [movedSize] = this.sizesState.splice(from, 1);
+    const [movedMin] = this.minSizesState.splice(from, 1);
+    this.panes.splice(to, 0, movedPane!);
+    this.sizesState.splice(to, 0, movedSize!);
+    this.minSizesState.splice(to, 0, movedMin!);
+    this.arrangeChildren();
+    this.applySizing();
+    this.requestRender();
+    this.resizeCallback?.([...this.sizesState]);
+    return true;
+  }
+
+  // Swap panes while keeping their slots in place.
+  swapWith(self: BoxRenderable, other: BoxRenderable): boolean {
+    if (self === other) return false;
+    if (containsNode(self, other) || containsNode(other, self)) return false;
+    const otherSplit = other.parent;
+    if (!(otherSplit instanceof SplitPaneRenderable)) return false;
+    const selfIndex = this.panes.indexOf(self);
+    const otherIndex = otherSplit.panes.indexOf(other);
+    if (selfIndex < 0 || otherIndex < 0) return false;
+
+    if (otherSplit === this) {
+      this.panes[selfIndex] = other;
+      this.panes[otherIndex] = self;
+      this.arrangeChildren();
+      this.applySizing();
+      this.requestRender();
+      return true;
     }
+
+    super.remove(self);
+    otherSplit.removePaneNode(other);
+    this.panes[selfIndex] = other;
+    otherSplit.panes[otherIndex] = self;
+    this.arrangeChildren();
+    otherSplit.arrangeChildren();
+    this.applySizing();
+    otherSplit.applySizing();
+    this.requestRender();
+    otherSplit.requestRender();
+    return true;
+  }
+
+  private removePaneNode(pane: BoxRenderable): void {
+    if (pane.parent === this) super.remove(pane);
+  }
+
+  private insertPane(pane: BoxRenderable, index: number, size?: number, minSize?: number): number {
+    const requestedSize = validateOptionalSize("size", size);
+    const requestedMin = validateOptionalSize("minSize", minSize);
+    const current = this.detachPane(pane);
+    if (current && current.index < index) index--;
 
     index = Math.max(0, Math.min(index, this.panes.length));
 
     this.shiftAuxiliaryChildren(index, 1);
     this.panes.splice(index, 0, pane);
-    this.sizesState.splice(index, 0, size ?? this.pendingSizes[index] ?? DefaultPaneSize);
-    this.minSizesState.splice(index, 0, minSize ?? this.pendingMins[index] ?? DefaultMinSize);
+    this.sizesState.splice(
+      index,
+      0,
+      resolveSize(requestedSize, current?.size, this.pendingSizes[index], DefaultPaneSize),
+    );
+    this.minSizesState.splice(
+      index,
+      0,
+      resolveSize(requestedMin, current?.minSize, this.pendingMins[index], DefaultMinSize),
+    );
     this.rebuildChildren();
 
     return this.getChildren().indexOf(pane);
   }
 
+  private detachPane(
+    pane: BoxRenderable,
+  ): { index: number; size: number | undefined; minSize: number | undefined } | null {
+    const index = this.panes.indexOf(pane);
+    if (index < 0) return null;
+
+    const [size] = this.sizesState.splice(index, 1);
+    const [minSize] = this.minSizesState.splice(index, 1);
+    this.panes.splice(index, 1);
+    this.shiftAuxiliaryChildren(index, -1);
+    return { index, size, minSize };
+  }
+
   private shiftAuxiliaryChildren(paneIndex: number, delta: -1 | 1): void {
     for (const [child, index] of this.auxiliaryChildren) {
       if (index > paneIndex) this.auxiliaryChildren.set(child, index + delta);
+    }
+  }
+
+  private arrangeChildren(): void {
+    const ordered: BaseRenderable[] = [];
+    this.panes.forEach((pane, paneIndex) => {
+      for (const [child, ownerIndex] of this.auxiliaryChildren) {
+        if (ownerIndex === paneIndex) ordered.push(child);
+      }
+      if (paneIndex > 0) ordered.push(this.gutters[paneIndex - 1]!);
+      ordered.push(pane);
+    });
+    for (const [child, ownerIndex] of this.auxiliaryChildren) {
+      if (ownerIndex >= this.panes.length) ordered.push(child);
+    }
+
+    const current: BaseRenderable[] = this.getChildren();
+    ordered.forEach((child, index) => {
+      const previous = current.indexOf(child);
+      if (previous === index) return;
+      const anchor = current[index];
+      if (anchor) super.insertBefore(child, anchor);
+      else super.add(child);
+      if (previous >= 0) current.splice(previous, 1);
+      current.splice(index, 0, child);
+    });
+    while (current.length > ordered.length) {
+      super.remove(current.pop()!);
     }
   }
 
@@ -495,34 +614,21 @@ export class SplitPaneRenderable extends BoxRenderable {
     }
     this.gutters = [];
 
-    for (const pane of this.panes) {
-      if (pane.parent === this) super.remove(pane);
+    for (let gutterIndex = 0; gutterIndex < this.panes.length - 1; gutterIndex++) {
+      const gutter = this.createGutter({
+        id: `${this.id}-gutter-${gutterIndex}`,
+        direction: this._direction,
+        width: this.isHorizontal ? this._gutterSize : "auto",
+        height: this.isHorizontal ? "auto" : this._gutterSize,
+        onGrab: (event) => this.grabGutter(gutterIndex, event),
+        visible: this.gutterVisible,
+        ...(this.gutterGlyphs !== undefined ? { glyphs: this.gutterGlyphs } : {}),
+        ...(this.gutterColor !== undefined ? { color: this.gutterColor } : {}),
+      });
+      this.gutters.push(gutter);
+      super.add(gutter);
     }
-
-    this.panes.forEach((pane, index) => {
-      for (const [child, paneIndex] of this.auxiliaryChildren) {
-        if (paneIndex === index && child.parent === this) super.add(child);
-      }
-      if (index > 0) {
-        const gutterIndex = index - 1;
-        const gutter = this.createGutter({
-          id: `${this.id}-gutter-${gutterIndex}`,
-          direction: this._direction,
-          width: this.isHorizontal ? this._gutterSize : "auto",
-          height: this.isHorizontal ? "auto" : this._gutterSize,
-          onGrab: (event) => this.grabGutter(gutterIndex, event),
-          visible: this.gutterVisible,
-          ...(this.gutterGlyphs !== undefined ? { glyphs: this.gutterGlyphs } : {}),
-          ...(this.gutterColor !== undefined ? { color: this.gutterColor } : {}),
-        });
-        this.gutters.push(gutter);
-        super.add(gutter);
-      }
-      super.add(pane);
-    });
-    for (const [child, paneIndex] of this.auxiliaryChildren) {
-      if (paneIndex >= this.panes.length && child.parent === this) super.add(child);
-    }
+    this.arrangeChildren();
     this.applySizing();
   }
 

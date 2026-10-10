@@ -231,6 +231,13 @@ describe("SplitPaneRenderable", () => {
       "split-gutter-0",
       "second",
     ]);
+
+    expect(split.movePane(first, 99)).toBe(true);
+    await setup.renderOnce();
+    expect(split.paneList.map((pane) => pane.id)).toEqual(["second", "first"]);
+    expect(split.movePane(first, 1)).toBe(false);
+    expect(() => split.movePane(first, Number.NaN)).toThrow("toIndex must be a finite integer");
+    expect(first.width).toBeGreaterThan(0);
   });
 
   test("keeps generated gutters owned and rejects unsupported children", () => {

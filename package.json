@@ -50,13 +50,13 @@
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
-    "format": "oxfmt .",
-    "format:check": "oxfmt --check .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
     "test": "bun test && bun test --preload @opentui/solid/preload ./tests/solid-children.solid.tsx",
     "test:dist": "bun scripts/test-dist.ts",
-    "check": "bun run lint && bun run format:check && bun run typecheck && bun run test",
+    "check": "bun run lint && bun run fmt:check && bun run typecheck && bun run test",
     "prepublishOnly": "bun run check && bun run build && bun run test:dist"
   },
   "devDependencies": {

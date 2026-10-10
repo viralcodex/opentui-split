@@ -3,5 +3,6 @@
 - Always update the readme after making changes to reflect new features, options, or usage instructions.
 - Less, simple and non-jargon comments in code.
 - If u have to justify your code with long comments, htat means your code is bad, think of simple logic instead.
+- no need to write unit or regression tests for every change you make, that makes the dev process slower and more cumbersome.
 - You should aim to write less code to cover everything, and lesser verbose tests, preventing future surface area for bugs.
 - README is for users to understand how to use the project, its features, and any relevant instructions, not about how to release and other irrelevant details.

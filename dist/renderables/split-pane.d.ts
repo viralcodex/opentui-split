@@ -35,18 +35,15 @@ export declare class SplitPaneRenderable extends BoxRenderable {
     get gutterSize(): number;
     set gutterSize(value: number | null | undefined);
     set gutterOptions(options: SplitPaneGutterOptions | null | undefined);
+    private hasGutterOptions;
     get onSizesChange(): ((sizes: number[]) => void) | undefined;
     set onSizesChange(callback: ((sizes: number[]) => void) | null | undefined);
     set onMouseDrag(handler: BoxOptions["onMouseDrag"] | undefined);
     set onMouseUp(handler: BoxOptions["onMouseUp"] | undefined);
     set onMouseDragEnd(handler: BoxOptions["onMouseDragEnd"] | undefined);
-    /** True when panes are laid out left-to-right (gutters are vertical hairlines). */
     private get isHorizontal();
-    /** Read the coordinate (x or y) that moves the active gutter. */
     private axisCoord;
-    /** Read a pane's extent along the split axis. */
     private readExtent;
-    /** Write a pane's extent along the split axis without touching the cross axis. */
     private writeExtent;
     protected onResize(width: number, height: number): void;
     protected createGutter(options: GutterOptions): GutterRenderable;
@@ -58,14 +55,22 @@ export declare class SplitPaneRenderable extends BoxRenderable {
     private applySizing;
     private applyBasis;
     private handleLayoutResize;
+    private sizesBeforeResize;
+    private resetActiveDragBasis;
     private applyDrag;
     add(obj: unknown, index?: number): number;
     insertBefore(obj: unknown, anchor?: unknown): number;
     private paneIndexAt;
     remove(child: BaseRenderable): void;
     addPane(pane: BoxRenderable, size?: number, minSize?: number): void;
+    get paneList(): BoxRenderable[];
+    movePane(pane: BoxRenderable, toIndex: number): boolean;
+    swapWith(self: BoxRenderable, other: BoxRenderable): boolean;
+    private removePaneNode;
     private insertPane;
+    private detachPane;
     private shiftAuxiliaryChildren;
+    private arrangeChildren;
     private rebuildChildren;
     setGutterVisible(visible: boolean): void;
     destroyRecursively(): void;
