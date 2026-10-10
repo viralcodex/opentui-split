@@ -1,6 +1,6 @@
 {
   "name": "opentui-split",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Draggable, resizable split-pane primitive for OpenTUI with Core, React, and Solid adapters.",
   "keywords": [
     "layout",
