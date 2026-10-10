@@ -1,0 +1,6 @@
+{
+  "ignorePatterns": ["dist/**"],
+  "rules": {
+    "complexity": ["error", 9]
+  }
+}

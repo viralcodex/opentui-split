@@ -39,6 +39,10 @@ describe("createPaneNavigator", () => {
     setup.mockInput.pressTab({ shift: true });
     expect(navigator.current).toBe(first);
     expect(changes).toEqual(["none->first", "first->second", "second->first"]);
+
+    navigator.dispose();
+    setup.mockInput.pressTab();
+    expect(navigator.current).toBe(first);
   });
 
   test("wraps around the ends by default and clamps when disabled", async () => {
@@ -78,19 +82,5 @@ describe("createPaneNavigator", () => {
 
     setup.mockInput.pressKey("l", { ctrl: true });
     expect(navigator.current).toBe(editor);
-  });
-
-  test("stops responding to keys after dispose", async () => {
-    const first = addPane("first");
-    addPane("second");
-    const navigator = createPaneNavigator(setup.renderer);
-    await setup.renderOnce();
-
-    setup.mockInput.pressTab();
-    expect(navigator.current).toBe(first);
-
-    navigator.dispose();
-    setup.mockInput.pressTab();
-    expect(navigator.current).toBe(first);
   });
 });

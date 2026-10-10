@@ -1,9 +1,5 @@
 #!/usr/bin/env bun
-/**
- * Smoke-tests the built `dist/` output the way a published consumer would:
- * it imports from the compiled entry point (not `src/`) and asserts the public
- * API and its type declarations are present. Run after `build`, before publish.
- */
+// Smoke-test the compiled package through its public entry points.
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -22,6 +18,12 @@ const required = [
   "dist/solid.d.ts",
   "dist/pane-navigator.js",
   "dist/pane-navigator.d.ts",
+  "dist/pane-dragdrop.js",
+  "dist/pane-dragdrop.d.ts",
+  "dist/pane-movement.js",
+  "dist/pane-movement.d.ts",
+  "dist/pane-reorder.js",
+  "dist/pane-reorder.d.ts",
   "dist/renderables/split-pane.js",
   "dist/renderables/split-pane.d.ts",
   "dist/renderables/gutter.js",
@@ -30,28 +32,30 @@ const required = [
 
 const missing = required.filter((file) => !existsSync(resolve(root, file)));
 if (missing.length > 0) {
-  console.error("dist is missing expected files:");
-  for (const file of missing) console.error(`  - ${file}`);
-  process.exit(1);
+  throw new Error(`dist is missing expected files: ${missing.join(", ")}`);
 }
 
 const mod = (await import(resolve(root, "dist/index.js"))) as Record<string, unknown>;
-const expectedExports = ["SplitPaneRenderable", "GutterRenderable", "createPaneNavigator"];
+const expectedExports = [
+  "SplitPaneRenderable",
+  "GutterRenderable",
+  "createPaneNavigator",
+  "createPaneDragDrop",
+  "createPaneMovement",
+  "createPaneReorder",
+];
 const absent = expectedExports.filter((name) => typeof mod[name] !== "function");
 if (absent.length > 0) {
-  console.error(`dist/index.js is missing exports: ${absent.join(", ")}`);
-  process.exit(1);
+  throw new Error(`dist/index.js is missing exports: ${absent.join(", ")}`);
 }
 
 for (const adapter of ["react", "solid"]) {
   const entry = (await import(resolve(root, `dist/${adapter}.js`))) as Record<string, unknown>;
   if (typeof entry.registerSplitPane !== "function") {
-    console.error(`dist/${adapter}.js is missing export: registerSplitPane`);
-    process.exit(1);
+    throw new Error(`dist/${adapter}.js is missing export: registerSplitPane`);
   }
   if (typeof entry.SplitPaneRenderable !== "function") {
-    console.error(`dist/${adapter}.js should re-export SplitPaneRenderable`);
-    process.exit(1);
+    throw new Error(`dist/${adapter}.js should re-export SplitPaneRenderable`);
   }
 }
 
@@ -60,6 +64,8 @@ interface DistSplitPane extends BoxRenderable {
   sizes: number[];
   addPane(pane: BoxRenderable, size?: number, minSize?: number): void;
   setGutterVisible(visible: boolean): void;
+  movePane(pane: BoxRenderable, toIndex: number): boolean;
+  readonly paneList: BoxRenderable[];
 }
 
 type DistSplitPaneConstructor = new (
@@ -106,10 +112,27 @@ try {
   if (navigator.current !== first) {
     throw new Error("dist pane navigator did not focus the first pane");
   }
+
+  split.direction = "horizontal";
+  await setup.renderOnce();
+  if (!split.movePane(first, 1) || split.paneList[1] !== first) {
+    throw new Error("dist split pane did not reorder via movePane");
+  }
+
+  const createPaneMovement = mod.createPaneMovement as (renderer: typeof setup.renderer) => {
+    move(direction: "left" | "right" | "up" | "down"): boolean;
+    dispose(): void;
+  };
+  first.focus();
+  const movement = createPaneMovement(setup.renderer);
+  if (!movement.move("left") || split.paneList[0] !== first) {
+    throw new Error("dist createPaneMovement did not move the focused pane");
+  }
+  movement.dispose();
 } finally {
   setup.renderer.destroy();
 }
 
 console.log(
-  `dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, pane navigation, react/solid adapters)`,
+  `dist behavior OK (${expectedExports.join(", ")}, gutter visibility, direction updates, pane navigation, pane reorder, react/solid adapters)`,
 );
