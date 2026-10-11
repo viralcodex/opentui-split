@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Set up npm
+        run: npm install --global npm@11
+
       - name: Verify tag matches package version
         run: |
           package_version="$(node -p "require('./package.json').version")"
