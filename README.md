@@ -6,15 +6,15 @@ Core, React, and Solid exports.
 ## Install
 
 ```bash
-npm install github:viralcodex/opentui-split
+npm install opentui-split
 ```
 
 ```bash
-pnpm add github:viralcodex/opentui-split
+pnpm add opentui-split
 ```
 
 ```bash
-bun add github:viralcodex/opentui-split
+bun add opentui-split
 ```
 
 ## Usage
