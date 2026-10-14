@@ -16,7 +16,7 @@ export class GutterRenderable extends BoxRenderable {
   private readonly direction: SplitDirection;
   private readonly glyph: string;
   private readonly color: RGBA;
-  private hairlineVisible: boolean;
+  private gutterVisible: boolean;
 
   constructor(ctx: RenderContext, options: GutterOptions) {
     const { direction, onGrab, visible, glyphs, color, ...boxOptions } = options;
@@ -29,7 +29,7 @@ export class GutterRenderable extends BoxRenderable {
     this.direction = direction;
     this.glyph = glyphs?.[direction] ?? DefaultGutterGlyphs[direction];
     this.color = color === undefined ? DefaultGutterColor : parseColor(color);
-    this.hairlineVisible = visible ?? true;
+    this.gutterVisible = visible ?? true;
 
     this.onMouseDown = (event: MouseEvent) => {
       if (event.button !== MouseButton.LEFT) return;
@@ -60,17 +60,17 @@ export class GutterRenderable extends BoxRenderable {
   }
 
   get showHairline(): boolean {
-    return this.hairlineVisible;
+    return this.gutterVisible;
   }
 
   set showHairline(value: boolean) {
-    if (value === this.hairlineVisible) return;
-    this.hairlineVisible = value;
+    if (value === this.gutterVisible) return;
+    this.gutterVisible = value;
     this.requestRender();
   }
 
   protected renderSelf(buffer: OptimizedBuffer): void {
-    if (!this.hairlineVisible) return;
+    if (!this.gutterVisible) return;
 
     if (this.direction === "horizontal") {
       for (let y = 0; y < this.height; y++) {
