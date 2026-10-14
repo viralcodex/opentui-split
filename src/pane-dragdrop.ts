@@ -7,11 +7,13 @@ import {
 } from "@opentui/core";
 import type { PaneDragDrop, PaneDragDropOptions } from "./models.js";
 import {
+  containsPoint,
   findPaneTarget,
   type PaneTarget,
   paneTargetAtPoint,
   reorderPane,
   swapPanes,
+  isVisibleInTree,
 } from "./pane-target.js";
 
 // Reorder panes by dragging within a split or across splits to swap places.
@@ -53,9 +55,6 @@ export function createPaneDragDrop(
     return index;
   };
 
-  const containsPoint = (pane: BoxRenderable, x: number, y: number): boolean =>
-    x >= pane.x && x < pane.x + pane.width && y >= pane.y && y < pane.y + pane.height;
-
   const onDown = (event: MouseEvent): void => {
     active = null;
     if (event.button !== MouseButton.LEFT || !modifierHeld(event)) return;
@@ -67,6 +66,7 @@ export function createPaneDragDrop(
     if (!active) return;
     const target = active;
     active = null;
+    if (!isVisibleInTree(target.pane) || target.pane.parent !== target.split) return;
 
     const drop = paneTargetAtPoint(root, event.x, event.y, isPane);
     if (drop) {
@@ -79,17 +79,24 @@ export function createPaneDragDrop(
     }
   };
 
-  root.onMouse = (event) => {
-    if (event.type === "down") onDown(event);
-    if (event.type === "up" || event.type === "drag-end") onDrop(event);
+  let disposed = false;
+  const processMouseEvent = root.processMouseEvent;
+  const listener = function (this: Renderable, event: MouseEvent): void {
+    if (!disposed) {
+      if (event.type === "down") onDown(event);
+      if (event.type === "up" || event.type === "drag-end") onDrop(event);
+    }
+    processMouseEvent.call(this, event);
   };
+  root.processMouseEvent = listener;
 
   return {
     get dragging() {
       return active !== null;
     },
     dispose: () => {
-      root.onMouse = undefined;
+      disposed = true;
+      if (root.processMouseEvent === listener) root.processMouseEvent = processMouseEvent;
       active = null;
     },
   };

@@ -83,4 +83,22 @@ describe("createPaneNavigator", () => {
     setup.mockInput.pressKey("l", { ctrl: true });
     expect(navigator.current).toBe(editor);
   });
+
+  test("excludes hidden panes, ancestors, and roots", () => {
+    const visible = addPane("visible");
+    const hidden = addPane("hidden");
+    const child = new BoxRenderable(setup.renderer, { id: "child", focusable: true });
+
+    hidden.add(child);
+    hidden.visible = false;
+
+    const navigator = createPaneNavigator(setup.renderer, { keymap: false });
+    expect(navigator.panes).toEqual([visible]);
+
+    const scoped = createPaneNavigator(setup.renderer, { root: hidden, keymap: false });
+    expect(scoped.panes).toEqual([]);
+
+    navigator.focusNext();
+    expect(navigator.current).toBe(visible);
+  });
 });

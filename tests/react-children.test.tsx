@@ -60,7 +60,7 @@ test("React applies split options and updates them declaratively", async () => {
   [first, gutter, second] = split.getChildren();
   expect([first!.height, gutter!.height, second!.height]).toEqual([15, 2, 43]);
   expect([first!.width, second!.width]).toEqual([60, 60]);
-  expect((gutter as GutterRenderable).showHairline).toBe(false);
+  expect((gutter as GutterRenderable).gutterVisibility).toBe(false);
 
   split.height = 100;
   setup!.renderer.start();

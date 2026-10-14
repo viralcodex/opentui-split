@@ -13,9 +13,9 @@ import type { GutterOptions, SplitDirection } from "../models.js";
 export class GutterRenderable extends BoxRenderable {
   private grabbed = false;
   private hovered = false;
-  private readonly direction: SplitDirection;
-  private readonly glyph: string;
-  private readonly color: RGBA;
+  private direction: SplitDirection;
+  private glyph: string;
+  private color: RGBA;
   private gutterVisible: boolean;
 
   constructor(ctx: RenderContext, options: GutterOptions) {
@@ -59,13 +59,24 @@ export class GutterRenderable extends BoxRenderable {
     };
   }
 
-  get showHairline(): boolean {
+  get gutterVisibility(): boolean {
     return this.gutterVisible;
   }
 
-  set showHairline(value: boolean) {
+  set gutterVisibility(value: boolean) {
     if (value === this.gutterVisible) return;
     this.gutterVisible = value;
+    this.requestRender();
+  }
+
+  updateAppearance(
+    options: Pick<GutterOptions, "direction" | "visible" | "glyphs" | "color">,
+  ): void {
+    const color = options.color === undefined ? DefaultGutterColor : parseColor(options.color);
+    this.direction = options.direction;
+    this.glyph = options.glyphs?.[options.direction] ?? DefaultGutterGlyphs[options.direction];
+    this.color = color;
+    this.gutterVisible = options.visible ?? true;
     this.requestRender();
   }
 

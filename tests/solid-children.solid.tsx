@@ -60,7 +60,7 @@ test("Solid applies split options and updates children declaratively", async () 
   expect(
     updated
       .filter((child) => child instanceof GutterRenderable)
-      .every((gutter) => !gutter.showHairline),
+      .every((gutter) => !gutter.gutterVisibility),
   ).toBe(true);
   setup.renderer.destroy();
 });

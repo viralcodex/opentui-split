@@ -6,6 +6,7 @@ import {
   type Renderable,
 } from "@opentui/core";
 import type { PaneNavigator, PaneNavigatorOptions } from "./models.js";
+import { isVisible, isVisibleInTree } from "./pane-target.js";
 
 function defaultKeymap(event: KeyEvent): "next" | "previous" | undefined {
   if (event.name !== "tab" || event.ctrl || event.meta || event.option) return;
@@ -17,9 +18,10 @@ function collectPanes(
   isPane: (renderable: Renderable) => boolean,
 ): Renderable[] {
   const panes: Renderable[] = [];
+  if (!isVisibleInTree(root)) return panes;
   const visit = (node: BaseRenderable): void => {
     for (const child of node.getChildren()) {
-      if (isRenderable(child) && isPane(child)) panes.push(child);
+      if (isVisible(child) && isRenderable(child) && isPane(child)) panes.push(child);
       visit(child);
     }
   };
