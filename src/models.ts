@@ -22,12 +22,10 @@ export interface SplitPaneGutterOptions {
   color?: RGBA | string;
 }
 
-export interface GutterOptions extends Pick<BoxOptions, "id" | "width" | "height"> {
+export interface GutterOptions
+  extends Pick<BoxOptions, "id" | "width" | "height">, SplitPaneGutterOptions {
   direction: SplitDirection;
   onGrab: (event: MouseEvent) => void;
-  visible?: boolean;
-  glyphs?: GutterGlyphs;
-  color?: RGBA | string;
 }
 
 export interface SplitPaneOptions extends BoxOptions {

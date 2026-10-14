@@ -69,7 +69,11 @@ describe("pane movement", () => {
     panes[0]!.add(new TextRenderable(setup.renderer, { content: "widget" }));
     const moves: Array<[number, number]> = [];
     let downs = 0;
+    let genericDowns = 0;
     setup.renderer.root.onMouseDown = () => downs++;
+    setup.renderer.root.onMouse = (event) => {
+      if (event.type === "down") genericDowns++;
+    };
     const controller = createPaneMovement(setup.renderer, {
       onReorder: (_split, from, to) => moves.push([from, to]),
     });
@@ -86,12 +90,16 @@ describe("pane movement", () => {
       );
     await drag();
     await drag(CTRL);
+    setup.renderer.root.onMouse = (event) => {
+      if (event.type === "down") genericDowns += 10;
+    };
     controller.dispose();
     await drag(CTRL);
 
     expect(ids(split)).toEqual(["b", "c", "a"]);
     expect(moves).toEqual([[0, 2]]);
     expect(downs).toBe(3);
+    expect(genericDowns).toBe(12);
   });
 
   test("drag inserts beside the target and cancels outside the split", async () => {
@@ -231,5 +239,17 @@ describe("pane movement", () => {
     expect(left.getChildren()[1]).toBe(gutter);
     expect(setup.renderer.currentFocusedRenderable).toBe(panes.a);
     expect(swaps).toEqual([["a", "c"]]);
+  });
+
+  test("movement excludes hidden ancestors and roots", async () => {
+    const { right, panes } = await buildNested();
+    const controller = createPaneMovement(setup.renderer, { keymap: false });
+    right.visible = false;
+    panes.a.focus();
+    expect(controller.move("right")).toBe(false);
+    panes.c.focus();
+    expect(controller.move("down")).toBe(false);
+    expect(ids(right)).toEqual(["c", "d"]);
+    controller.dispose();
   });
 });

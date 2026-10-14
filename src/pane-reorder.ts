@@ -1,5 +1,4 @@
-import type { CliRenderer, KeyEvent } from "@opentui/core";
-import type { BoxRenderable } from "@opentui/core";
+import type { BoxRenderable, CliRenderer, KeyEvent } from "@opentui/core";
 import type {
   PaneMoveDirection,
   PaneReorder,

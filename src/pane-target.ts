@@ -1,4 +1,4 @@
-import { BoxRenderable, isRenderable, type Renderable } from "@opentui/core";
+import { type BaseRenderable, BoxRenderable, isRenderable, type Renderable } from "@opentui/core";
 import type {
   PaneMoveDirection,
   PanePredicate,
@@ -12,11 +12,24 @@ export interface PaneTarget {
   pane: BoxRenderable;
 }
 
+export function isVisible(node: BaseRenderable): boolean {
+  return node.visible && !(isRenderable(node) && node.isDestroyed);
+}
+
+export function isVisibleInTree(node: BaseRenderable | null): boolean {
+  if (!node) return false;
+  for (let current: BaseRenderable | null = node; current; current = current.parent) {
+    if (!isVisible(current)) return false;
+  }
+  return true;
+}
+
 export function findPaneTarget(
   start: Renderable | null,
   root: Renderable,
   isPane: PanePredicate,
 ): PaneTarget | null {
+  if (!isVisibleInTree(start)) return null;
   let target: PaneTarget | null = null;
 
   for (let node = start; node; node = node.parent) {
@@ -47,9 +60,12 @@ export function isLeafPane(pane: BoxRenderable): boolean {
 
 export function collectLeafPanes(root: Renderable, isPane: PanePredicate): BoxRenderable[] {
   const panes: BoxRenderable[] = [];
+  if (!isVisibleInTree(root)) return panes;
   const visit = (node: Renderable): void => {
+    if (!isVisible(node)) return;
     if (node instanceof SplitPaneRenderable) {
       for (const pane of node.paneList) {
+        if (!isVisible(pane)) continue;
         if (isLeafPane(pane)) {
           if (isPane(pane)) panes.push(pane);
         } else {
@@ -64,7 +80,7 @@ export function collectLeafPanes(root: Renderable, isPane: PanePredicate): BoxRe
   return panes;
 }
 
-function containsPoint(pane: BoxRenderable, x: number, y: number): boolean {
+export function containsPoint(pane: BoxRenderable, x: number, y: number): boolean {
   return x >= pane.x && x < pane.x + pane.width && y >= pane.y && y < pane.y + pane.height;
 }
 
@@ -74,9 +90,11 @@ export function paneTargetAtPoint(
   y: number,
   isPane: PanePredicate,
 ): PaneTarget | null {
+  if (!isVisibleInTree(root)) return null;
   const visitChildren = (node: Renderable): PaneTarget | null => {
     for (const child of node.getChildren()) {
-      if (!(child instanceof BoxRenderable) || !containsPoint(child, x, y)) continue;
+      if (!(child instanceof BoxRenderable) || !isVisible(child) || !containsPoint(child, x, y))
+        continue;
       const target = visit(child);
       if (target) return target;
     }
@@ -85,7 +103,7 @@ export function paneTargetAtPoint(
   const visit = (node: Renderable): PaneTarget | null => {
     if (node instanceof SplitPaneRenderable) {
       for (const pane of node.paneList) {
-        if (!containsPoint(pane, x, y)) continue;
+        if (!isVisible(pane) || !containsPoint(pane, x, y)) continue;
         if (pane instanceof SplitPaneRenderable) return visit(pane);
         return (
           visitChildren(pane) ?? (isPane(pane) && isLeafPane(pane) ? { split: node, pane } : null)

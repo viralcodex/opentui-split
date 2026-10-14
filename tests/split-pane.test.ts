@@ -222,7 +222,7 @@ describe("SplitPaneRenderable", () => {
       "second",
     ]);
     const gutters = split.getChildren().filter((child) => child instanceof GutterRenderable);
-    expect(gutters.every((gutter) => gutter.showHairline)).toBe(true);
+    expect(gutters.every((gutter) => gutter.gutterVisibility)).toBe(true);
 
     split.remove(middle);
     await setup.renderOnce();
@@ -251,6 +251,58 @@ describe("SplitPaneRenderable", () => {
     expect(split.add(text)).toBe(-1);
     expect(text.parent).toBeNull();
     text.destroy();
+  });
+
+  test("fits sizes with insets and restores collapsed proportions", async () => {
+    const render = () => setup.renderOnce().then(() => setup.renderOnce());
+    for (const options of [{}, { border: true }, { paddingLeft: 2, paddingRight: 2 }]) {
+      const split = new SplitPaneRenderable(setup.renderer, {
+        id: "bounded",
+        width: 50,
+        height: 10,
+        ...options,
+      });
+      split.addPane(new BoxRenderable(setup.renderer, { id: "first" }), 20);
+      split.addPane(new BoxRenderable(setup.renderer, { id: "second" }), 29);
+      setup.renderer.root.add(split);
+      await setup.renderOnce();
+      const original = split.sizes;
+      for (const width of [100, 1, 0, 50]) {
+        split.width = width;
+        await render();
+        expect(split.sizes).toEqual(
+          split.paneList.map((pane) => pane.getLayoutNode().getComputedLayout().width),
+        );
+      }
+      expect(split.sizes).toEqual(original);
+      split.destroyRecursively();
+    }
+    const small = new SplitPaneRenderable(setup.renderer, { id: "small", width: 10, height: 10 });
+    small.addPane(new BoxRenderable(setup.renderer, { id: "small-first" }));
+    small.addPane(new BoxRenderable(setup.renderer, { id: "small-second" }));
+    setup.renderer.root.add(small);
+    await render();
+    expect(childrenFit(small)).toBe(true);
+    small.width = 0;
+    await setup.renderOnce();
+    small.addPane(new BoxRenderable(setup.renderer, { id: "small-third" }), 10);
+    await setup.renderOnce();
+    small.width = 12;
+    await render();
+    expect(small.sizes).toEqual([3, 2, 5]);
+  });
+
+  test("rejects destroyed and cyclic children without changing pane ownership", () => {
+    const split = new SplitPaneRenderable(setup.renderer, { id: "split" });
+    const dead = new BoxRenderable(setup.renderer, { id: "dead" });
+    dead.destroy();
+
+    expect(split.add(dead)).toBe(-1);
+    expect(() => split.add(split)).toThrow("Cannot insert a pane");
+    expect(split.paneList).toEqual([]);
+    expect(split.getChildren()).toEqual([]);
+
+    split.destroyRecursively();
   });
 
   test("rejects invalid pane and gutter sizes", () => {
@@ -286,7 +338,7 @@ describe("SplitPaneRenderable", () => {
     await setup.renderOnce();
 
     const gutter = split.getChildren().find((child) => child instanceof GutterRenderable);
-    expect((gutter as GutterRenderable).showHairline).toBe(false);
+    expect((gutter as GutterRenderable).gutterVisibility).toBe(false);
 
     // Dragging the (invisible) gutter still conserves size.
     await setup.mockMouse.drag(40, 5, 50, 5, MouseButtons.LEFT);
@@ -347,13 +399,13 @@ describe("SplitPaneRenderable", () => {
       .getChildren()
       .filter((child) => child instanceof GutterRenderable) as GutterRenderable[];
     expect(gutters).toHaveLength(2);
-    expect(gutters.every((gutter) => !gutter.showHairline)).toBe(true);
+    expect(gutters.every((gutter) => !gutter.gutterVisibility)).toBe(true);
 
     split.setGutterVisible(true);
-    expect(gutters.every((gutter) => gutter.showHairline)).toBe(true);
+    expect(gutters.every((gutter) => gutter.gutterVisibility)).toBe(true);
   });
 
-  test("rebuilds gutters when gutterSize changes", async () => {
+  test("reuses gutters when gutter size or appearance changes", async () => {
     const split = new SplitPaneRenderable(setup.renderer, {
       id: "split",
       width: 60,
@@ -364,11 +416,15 @@ describe("SplitPaneRenderable", () => {
     setup.renderer.root.add(split);
     await setup.renderOnce();
 
+    const original = split.getChildren()[1];
     split.gutterSize = 3;
+    split.gutterOptions = { color: "red", visible: false };
     await setup.renderOnce();
 
     const gutter = split.getChildren()[1];
     expect(gutter).toBeInstanceOf(GutterRenderable);
+    expect(gutter).toBe(original);
     expect(gutter!.width).toBe(3);
+    expect((gutter as GutterRenderable).gutterVisibility).toBe(false);
   });
 });
