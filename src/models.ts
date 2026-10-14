@@ -4,6 +4,7 @@ import type {
   BoxOptions,
   KeyEvent,
   MouseEvent,
+  MousePointerStyle,
   Renderable,
   RGBA,
 } from "@opentui/core";
@@ -69,6 +70,7 @@ export interface PaneMovementOptions {
   modifier?: PaneDragModifier | false;
   isPane?: PanePredicate;
   handle?: (target: Renderable, pane: BoxRenderable) => boolean;
+  cursor?: MousePointerStyle | false;
   keymap?: PaneReorderKeymap | false;
   onReorder?: PaneReorderCallback;
   onSwap?: PaneSwapCallback;
@@ -81,6 +83,6 @@ export interface PaneMovement {
 }
 
 export type PaneDragDropOptions = Omit<PaneMovementOptions, "keymap">;
-export type PaneReorderOptions = Omit<PaneMovementOptions, "modifier" | "handle">;
+export type PaneReorderOptions = Omit<PaneMovementOptions, "modifier" | "handle" | "cursor">;
 export type PaneDragDrop = Pick<PaneMovement, "dragging" | "dispose">;
 export type PaneReorder = Pick<PaneMovement, "move" | "dispose">;

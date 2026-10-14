@@ -25,10 +25,17 @@ export function createPaneDragDrop(
   const modifier = options.modifier === undefined ? "ctrl" : options.modifier;
   const isPane = options.isPane ?? (() => true);
   const handle = options.handle;
+  const cursor = options.cursor === undefined ? "move" : options.cursor;
   const onReorder = options.onReorder;
   const onSwap = options.onSwap;
 
   let active: PaneTarget | null = null;
+
+  const setCursor = (dragging: boolean): void => {
+    if (!cursor) return;
+    renderer.setMousePointer(dragging ? cursor : "default");
+    renderer.requestRender();
+  };
 
   const modifierHeld = (event: MouseEvent): boolean =>
     !modifier ? true : Boolean(event.modifiers[modifier]);
@@ -59,13 +66,17 @@ export function createPaneDragDrop(
     active = null;
     if (event.button !== MouseButton.LEFT || !modifierHeld(event)) return;
     const grab = findPaneTarget(event.target, root, isPane);
-    if (grab && handleAllows(event.target, grab.pane)) active = grab;
+    if (grab && handleAllows(event.target, grab.pane)) {
+      active = grab;
+      setCursor(true);
+    }
   };
 
   const onDrop = (event: MouseEvent): void => {
     if (!active) return;
     const target = active;
     active = null;
+    setCursor(false);
     if (!isVisibleInTree(target.pane) || target.pane.parent !== target.split) return;
 
     const drop = paneTargetAtPoint(root, event.x, event.y, isPane);
@@ -97,6 +108,7 @@ export function createPaneDragDrop(
     dispose: () => {
       disposed = true;
       if (root.processMouseEvent === listener) root.processMouseEvent = processMouseEvent;
+      if (active) setCursor(false);
       active = null;
     },
   };

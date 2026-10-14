@@ -142,15 +142,16 @@ const movement = createPaneMovement(renderer, {
 });
 ```
 
-| Option      | Type                                                                     | Default       | Description                                     |
-| ----------- | ------------------------------------------------------------------------ | ------------- | ----------------------------------------------- |
-| `root`      | `Renderable`                                                             | Renderer root | Subtree whose panes can move.                   |
-| `modifier`  | `"ctrl" \| "alt" \| "shift"` \| `false`                                  | `"ctrl"`      | Required drag key. `false` allows any drag.     |
-| `handle`    | `(target, pane) => boolean`                                              | Whole pane    | Restricts where a drag can begin.               |
-| `keymap`    | `(event) => "left" \| "right" \| "up" \| "down" \| undefined` \| `false` | Alt + arrow   | Maps keys or disables keyboard handling.        |
-| `isPane`    | `(pane) => boolean`                                                      | Any pane      | Selects movable panes.                          |
-| `onReorder` | `(split, from, to) => void`                                              | None          | Runs after an in-split move.                    |
-| `onSwap`    | `(first, second) => void`                                                | None          | Runs after panes exchange places across splits. |
+| Option      | Type                                                                     | Default       | Description                                                     |
+| ----------- | ------------------------------------------------------------------------ | ------------- | --------------------------------------------------------------- |
+| `root`      | `Renderable`                                                             | Renderer root | Subtree whose panes can move.                                   |
+| `modifier`  | `"ctrl" \| "alt" \| "shift"` \| `false`                                  | `"ctrl"`      | Required drag key. `false` allows any drag.                     |
+| `handle`    | `(target, pane) => boolean`                                              | Whole pane    | Restricts where a drag can begin.                               |
+| `cursor`    | `"default" \| "pointer" \| "move" \| "crosshair" \| ...` \| `false`      | `"move"`      | Mouse pointer shown while dragging. `false` keeps it unchanged. |
+| `keymap`    | `(event) => "left" \| "right" \| "up" \| "down" \| undefined` \| `false` | Alt + arrow   | Maps keys or disables keyboard handling.                        |
+| `isPane`    | `(pane) => boolean`                                                      | Any pane      | Selects movable panes.                                          |
+| `onReorder` | `(split, from, to) => void`                                              | None          | Runs after an in-split move.                                    |
+| `onSwap`    | `(first, second) => void`                                                | None          | Runs after panes exchange places across splits.                 |
 
 Some terminals do not report modifier keys during mouse drags. Set `modifier`
 to `false` and use a `handle` there. Create one movement controller per root; it
