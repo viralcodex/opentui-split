@@ -22,6 +22,11 @@ bun add opentui-split
 Every pane except the last uses a fixed size. The last pane fills the remaining
 space. Drag a gutter to resize its adjacent panes.
 
+Sizes use whole terminal cells within the split's content area, excluding its
+border, padding, and gutters. Oversized initial allocations shrink to fit.
+Resizing preserves pane proportions, including after its collapse to zero size.</br>
+`minSizes` constrains dragging, not container shrinking.
+
 ### Core
 
 ```typescript
@@ -45,6 +50,7 @@ right.addPane(bottom, 12, 4);
 ```
 
 `addPane` accepts the pane, initial size, and minimum size.
+A pane cannot contain itself or be inserted into one of its descendants.
 
 ### React
 
@@ -94,12 +100,12 @@ effect, call `registerSplitPane()` once at startup.
 | `gutterOptions` | `SplitPaneGutterOptions`     | See below      | Appearance shared by generated gutters.                          |
 | `onSizesChange` | `(sizes: number[]) => void`  | None           | Called after a drag or container resize.                         |
 
-`gutterOptions` accepts `visible`, `color`, and direction-specific `glyphs`. A
-hidden gutter remains draggable too.
+`gutterOptions` accepts `visible`, `color`, and direction-specific `glyphs`. A hidden gutter remains draggable too. It accepts the same fields when constructing a standalone gutter.</br>
+Runtime appearance and size updates reuse existing gutters.
 
 ## Keyboard focus
 
-`createPaneNavigator` moves focus through focusable renderables with `Tab` and
+`createPaneNavigator` moves focus through visible focusable renderables with `Tab` and
 `Shift+Tab`. Set `focusedBorderColor` on panes to show focus state.
 
 ```typescript
@@ -148,7 +154,9 @@ const movement = createPaneMovement(renderer, {
 
 Some terminals do not report modifier keys during mouse drags. Set `modifier`
 to `false` and use a `handle` there. Create one movement controller per root; it
-owns `root.onMouse`. Specific mouse handlers such as `onMouseDown` still run.
+preserves `root.onMouse` and specific handlers such as `onMouseDown`, including
+handlers assigned after controller creation. Hidden panes are excluded from
+movement. A drag is cancelled if its pane is hidden or detached before release.
 
 Call `move(direction)` for manual keyboard movement and `dispose()` to unbind
 mouse and keyboard handling. Core code can use `split.movePane(pane, toIndex)`
