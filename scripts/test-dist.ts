@@ -84,13 +84,13 @@ try {
   setup.renderer.root.add(split);
   await setup.renderOnce();
 
-  const gutter = split.getChildren()[1] as BoxRenderable & { showHairline?: boolean };
-  if (split.getChildrenCount() !== 3 || gutter.showHairline !== true) {
+  const gutter = split.getChildren()[1] as BoxRenderable & { gutterVisibility?: boolean };
+  if (split.getChildrenCount() !== 3 || gutter.gutterVisibility !== true) {
     throw new Error("dist split pane did not create a visible gutter between two panes");
   }
 
   split.setGutterVisible(false);
-  if (gutter.showHairline) {
+  if (gutter.gutterVisibility) {
     throw new Error("dist split pane did not update gutter visibility");
   }
 

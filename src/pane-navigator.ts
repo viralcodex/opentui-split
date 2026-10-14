@@ -21,7 +21,8 @@ function collectPanes(
   if (!isVisibleInTree(root)) return panes;
   const visit = (node: BaseRenderable): void => {
     for (const child of node.getChildren()) {
-      if (isVisible(child) && isRenderable(child) && isPane(child)) panes.push(child);
+      if (!isVisible(child)) continue;
+      if (isRenderable(child) && isPane(child)) panes.push(child);
       visit(child);
     }
   };
