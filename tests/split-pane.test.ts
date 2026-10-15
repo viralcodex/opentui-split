@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { BoxRenderable, RGBA, TextRenderable } from "@opentui/core";
+import { BoxRenderable, type BoxOptions, RGBA, TextRenderable } from "@opentui/core";
 import { createTestRenderer, MouseButtons, type TestRendererSetup } from "@opentui/core/testing";
 import { GutterRenderable, SplitPaneRenderable } from "../src/index.js";
 
@@ -255,7 +255,16 @@ describe("SplitPaneRenderable", () => {
 
   test("fits sizes with insets and restores collapsed proportions", async () => {
     const render = () => setup.renderOnce().then(() => setup.renderOnce());
-    for (const options of [{}, { border: true }, { paddingLeft: 2, paddingRight: 2 }]) {
+    const cases: BoxOptions[] = [
+      {},
+      { border: true },
+      { paddingLeft: 2, paddingRight: 2 },
+      { padding: 2 },
+      { paddingX: 2 },
+      { padding: 3, paddingX: 2, paddingLeft: 1 },
+      { paddingLeft: "10%", paddingRight: "10%" },
+    ];
+    for (const options of cases) {
       const split = new SplitPaneRenderable(setup.renderer, {
         id: "bounded",
         width: 50,
@@ -270,9 +279,7 @@ describe("SplitPaneRenderable", () => {
       for (const width of [100, 1, 0, 50]) {
         split.width = width;
         await render();
-        expect(split.sizes).toEqual(
-          split.paneList.map((pane) => pane.getLayoutNode().getComputedLayout().width),
-        );
+        expect(split.sizes).toEqual(split.paneList.map((pane) => pane.getComputedLayout().width));
       }
       expect(split.sizes).toEqual(original);
       split.destroyRecursively();
@@ -290,6 +297,37 @@ describe("SplitPaneRenderable", () => {
     small.width = 12;
     await render();
     expect(small.sizes).toEqual([3, 2, 5]);
+  });
+
+  test("updates vertical percentage padding when its containing width changes", async () => {
+    const calls: number[][] = [];
+    const parent = new BoxRenderable(setup.renderer, {
+      id: "parent",
+      width: 100,
+      height: 40,
+      border: true,
+      paddingX: 4,
+    });
+    const split = new SplitPaneRenderable(setup.renderer, {
+      id: "percent",
+      direction: "vertical",
+      width: "100%",
+      height: "100%",
+      paddingY: "10%",
+      onSizesChange: (sizes) => calls.push(sizes),
+    });
+    split.addPane(new BoxRenderable(setup.renderer, { id: "first" }), 10);
+    split.addPane(new BoxRenderable(setup.renderer, { id: "second" }), 10);
+    parent.add(split);
+    setup.renderer.root.add(parent);
+    for (const width of [100, 60]) {
+      parent.width = width;
+      await setup.renderOnce();
+      await setup.renderOnce();
+      expect(split.sizes).toEqual(split.paneList.map((pane) => pane.getComputedLayout().height));
+    }
+    expect(calls.at(-1)).toEqual(split.sizes);
+    expect(split.sizes.reduce((total, size) => total + size, 0)).toBe(27);
   });
 
   test("rejects destroyed and cyclic children without changing pane ownership", () => {

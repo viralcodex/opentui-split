@@ -5,10 +5,9 @@ import {
   isRenderable,
   type MouseEvent,
   type RenderContext,
-  Yoga,
 } from "@opentui/core";
 import { DefaultMinSize, DefaultPaneSize } from "../constants.js";
-import { fitSizes, scaleSizes } from "../pane-sizing.js";
+import { contentExtent, fitSizes, scaleSizes } from "../pane-sizing.js";
 import type {
   GutterOptions,
   SplitDirection,
@@ -233,24 +232,9 @@ export class SplitPaneRenderable extends BoxRenderable {
     }
   }
 
-  override updateFromLayout(): void {
-    super.updateFromLayout();
+  protected override onUpdate(deltaTime: number): void {
+    super.onUpdate(deltaTime);
     this.handleLayoutResize();
-  }
-
-  protected override _hasVisibleChildFilter(): boolean {
-    return this.sizesState.includes(0);
-  }
-
-  protected override _getVisibleChildren(): number[] {
-    return this.getChildren()
-      .filter((child) => {
-        const paneIndex = this.panes.indexOf(child as BoxRenderable);
-        if (paneIndex >= 0 && this.sizesState[paneIndex] === 0) return false;
-        const layout = child.getLayoutNode().getComputedLayout();
-        return layout.width > 0 && layout.height > 0;
-      })
-      .map((child) => child.num);
   }
 
   protected createGutter(options: GutterOptions): GutterRenderable {
@@ -305,7 +289,7 @@ export class SplitPaneRenderable extends BoxRenderable {
   private paneSize(index: number): number {
     const pane = this.panes[index];
     if (!pane) return 0;
-    const layout = pane.getLayoutNode().getComputedLayout();
+    const layout = pane.getComputedLayout();
     return this.isHorizontal ? layout.width : layout.height;
   }
 
@@ -337,19 +321,7 @@ export class SplitPaneRenderable extends BoxRenderable {
   }
 
   private availableSize(): number {
-    const node = this.getLayoutNode();
-    const layout = node.getComputedLayout();
-    const edges = this.isHorizontal
-      ? [Yoga.Edge.Left, Yoga.Edge.Right]
-      : [Yoga.Edge.Top, Yoga.Edge.Bottom];
-    const insets = edges.reduce(
-      (total, edge) => total + node.getComputedPadding(edge) + node.getComputedBorder(edge),
-      0,
-    );
-    const content = Math.max(
-      0,
-      Math.round((this.isHorizontal ? layout.width : layout.height) - insets),
-    );
+    const content = Math.round(contentExtent(this, this.isHorizontal));
     const gutterSize =
       this.gutters.length > 0
         ? Math.min(this._gutterSize, Math.floor(content / this.gutters.length))

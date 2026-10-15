@@ -1,3 +1,30 @@
+import { BoxRenderable, type Renderable, Yoga } from "@opentui/core";
+
+export function contentExtent(node: Renderable, horizontal: boolean): number {
+  const layout = node.getComputedLayout();
+  const edges = horizontal ? [Yoga.Edge.Left, Yoga.Edge.Right] : [Yoga.Edge.Top, Yoga.Edge.Bottom];
+  const group = horizontal ? Yoga.Edge.Horizontal : Yoga.Edge.Vertical;
+  const sides = horizontal ? (["left", "right"] as const) : (["top", "bottom"] as const);
+  const border = node instanceof BoxRenderable ? node.border : false;
+  const borderSize = sides.filter(
+    (side) => border === true || (Array.isArray(border) && border.includes(side)),
+  ).length;
+  const paddings = edges.map((edge) =>
+    [edge, group, Yoga.Edge.All]
+      .map((candidate) => node.getPadding(candidate))
+      .find((padding) => padding.unit !== Yoga.Unit.Undefined),
+  );
+  const hasPercent = paddings.some((padding) => padding?.unit === Yoga.Unit.Percent);
+  const referenceWidth = hasPercent && node.parent ? contentExtent(node.parent, true) : 0;
+  const paddingSize = paddings.reduce((total, padding) => {
+    if (!padding) return total;
+    const value =
+      padding.unit === Yoga.Unit.Percent ? (padding.value * referenceWidth) / 100 : padding.value;
+    return total + Math.max(0, value);
+  }, 0);
+  return Math.max(0, (horizontal ? layout.width : layout.height) - borderSize - paddingSize);
+}
+
 export function scaleSizes(sizes: number[], total: number): number[] {
   if (sizes.length === 0) return [];
   const sum = sizes.reduce((value, size) => value + size, 0);
