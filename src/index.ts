@@ -1,4 +1,5 @@
 export * from "./models.js";
+export * from "./pane-layout.js";
 export * from "./pane-dragdrop.js";
 export * from "./pane-movement.js";
 export * from "./pane-navigator.js";

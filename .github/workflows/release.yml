@@ -25,11 +25,11 @@ jobs:
           node-version: 26.4.0
       - run: bun install --frozen-lockfile
       - name: Check tag matches package version
-        run: |
-          package_version="v$(node -p "require('./package.json').version")"
-          test "$package_version" = "$GITHUB_REF_NAME"
-          - run: bun run build
-          - run: bun run test:dist
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Build release package
+        run: bun run build
+      - name: Test release package
+        run: bun run test:dist
       - run: npm pack
       - name: Create GitHub release
         env:

@@ -25,10 +25,18 @@ export function contentExtent(node: Renderable, horizontal: boolean): number {
   return Math.max(0, (horizontal ? layout.width : layout.height) - borderSize - paddingSize);
 }
 
+export function normalizeWeights(weights: number[]): number[] {
+  const maximum = weights.reduce((value, weight) => Math.max(value, weight), 0);
+  return weights.map((weight) => (maximum > 0 ? weight / maximum : 0));
+}
+
 export function scaleSizes(sizes: number[], total: number): number[] {
   if (sizes.length === 0) return [];
-  const sum = sizes.reduce((value, size) => value + size, 0);
-  const exact = sizes.map((size) => (sum > 0 ? (size * total) / sum : total / sizes.length));
+  const weights = normalizeWeights(sizes);
+  const sum = weights.reduce((value, weight) => value + weight, 0);
+  const exact = weights.map((weight) =>
+    sum > 0 ? (weight / sum) * total : total / weights.length,
+  );
   const scaled = exact.map(Math.floor);
   const remainder = total - scaled.reduce((value, size) => value + size, 0);
   const order = exact

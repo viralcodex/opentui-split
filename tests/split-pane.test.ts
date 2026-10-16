@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { BoxRenderable, type BoxOptions, RGBA, TextRenderable } from "@opentui/core";
 import { createTestRenderer, MouseButtons, type TestRendererSetup } from "@opentui/core/testing";
-import { GutterRenderable, SplitPaneRenderable } from "../src/index.js";
+import { GutterRenderable, SplitPaneRenderable, type SplitPaneOptions } from "../src/index.js";
 
 function childrenFit(parent: BoxRenderable): boolean {
   return parent.getChildren().every((child) => {
@@ -18,6 +18,24 @@ function childrenFit(parent: BoxRenderable): boolean {
 describe("SplitPaneRenderable", () => {
   let setup: TestRendererSetup;
 
+  async function buildSplit(options: SplitPaneOptions = {}) {
+    const split = new SplitPaneRenderable(setup.renderer, {
+      id: "split",
+      width: 100,
+      height: 10,
+      sizes: [40, 59],
+      minSizes: [10, 10],
+      ...options,
+    });
+    const left = new BoxRenderable(setup.renderer, { id: "left" });
+    const right = new BoxRenderable(setup.renderer, { id: "right" });
+    split.add(left);
+    split.add(right);
+    setup.renderer.root.add(split);
+    await setup.renderOnce();
+    return { split, left, right };
+  }
+
   beforeEach(async () => {
     setup = await createTestRenderer({ width: 120, height: 40 });
   });
@@ -28,18 +46,12 @@ describe("SplitPaneRenderable", () => {
 
   test("scales fixed panes when its own layout size changes", async () => {
     const calls: number[][] = [];
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
+    const { split, left, right } = await buildSplit({
       width: 50,
-      height: 10,
+      sizes: [20, 29],
+      minSizes: [5, 5],
       onSizesChange: (sizes) => calls.push(sizes),
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 20, 5);
-    split.addPane(right, 29, 5);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     split.width = 100;
     setup.renderer.start();
@@ -53,18 +65,9 @@ describe("SplitPaneRenderable", () => {
 
   test("resizes only on left drag and reports both pane sizes", async () => {
     const calls: number[][] = [];
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
-      width: 100,
-      height: 10,
+    const { left, right } = await buildSplit({
       onSizesChange: (sizes) => calls.push(sizes),
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 40, 10);
-    split.addPane(right, 59, 10);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     await setup.mockMouse.drag(40, 5, 50, 5, MouseButtons.RIGHT);
     await setup.flush();
@@ -82,18 +85,12 @@ describe("SplitPaneRenderable", () => {
 
   test("clamps fractional minimums to whole cells", async () => {
     const calls: number[][] = [];
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
+    const { left, right } = await buildSplit({
       width: 30,
-      height: 10,
+      sizes: [15, 14],
+      minSizes: [10.5, 10.5],
       onSizesChange: (sizes) => calls.push(sizes),
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 15, 10.5);
-    split.addPane(right, 14, 10.5);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     await setup.mockMouse.drag(15, 5, 1, 5, MouseButtons.LEFT);
     await setup.flush();
@@ -106,20 +103,11 @@ describe("SplitPaneRenderable", () => {
     const calls: number[][] = [];
     let dragCalls = 0;
     let upCalls = 0;
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
-      width: 100,
-      height: 10,
+    const { split, left, right } = await buildSplit({
       onSizesChange: (sizes) => calls.push(sizes),
       onMouseDrag: () => dragCalls++,
       onMouseUp: () => upCalls++,
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 40, 10);
-    split.addPane(right, 59, 10);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     await setup.mockMouse.pressDown(40, 5, MouseButtons.LEFT);
     await setup.mockMouse.emitMouseEvent("drag", 45, 5, MouseButtons.LEFT);
@@ -138,17 +126,11 @@ describe("SplitPaneRenderable", () => {
   });
 
   test("keeps panes inside the split when it shrinks below their minimums", async () => {
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
+    const { split, left, right } = await buildSplit({
       width: 30,
-      height: 10,
+      sizes: [15, 14],
+      minSizes: [8, 8],
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 15, 8);
-    split.addPane(right, 14, 8);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     split.width = 10;
     await setup.renderOnce();
@@ -362,23 +344,13 @@ describe("SplitPaneRenderable", () => {
   });
 
   test("hides gutters when gutter visibility is false but still resizes", async () => {
-    const split = new SplitPaneRenderable(setup.renderer, {
-      id: "split",
-      width: 100,
-      height: 10,
+    const { split, left, right } = await buildSplit({
       gutterOptions: { visible: false },
     });
-    const left = new BoxRenderable(setup.renderer, { id: "left" });
-    const right = new BoxRenderable(setup.renderer, { id: "right" });
-    split.addPane(left, 40, 10);
-    split.addPane(right, 59, 10);
-    setup.renderer.root.add(split);
-    await setup.renderOnce();
 
     const gutter = split.getChildren().find((child) => child instanceof GutterRenderable);
     expect((gutter as GutterRenderable).gutterVisibility).toBe(false);
 
-    // Dragging the (invisible) gutter still conserves size.
     await setup.mockMouse.drag(40, 5, 50, 5, MouseButtons.LEFT);
     await setup.flush();
     expect(left.width).toBe(50);

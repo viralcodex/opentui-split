@@ -86,6 +86,7 @@ export class SplitPaneRenderable extends BoxRenderable {
   private isDestroying = false;
   private lastAvailable: number | undefined;
   private allocationBasis: number[] = [];
+  protected initialSizesAreWeights = false;
 
   constructor(ctx: RenderContext, options: SplitPaneOptions) {
     const {
@@ -135,6 +136,11 @@ export class SplitPaneRenderable extends BoxRenderable {
 
   get sizes(): number[] {
     return [...(this.panes.length > 0 ? this.sizesState : this.pendingSizes)];
+  }
+
+  // Returns the layout weights for the panes, using the current sizes if available,
+  get layoutWeights(): number[] {
+    return this.sizesState.some((size) => size > 0) ? this.sizes : [...this.allocationBasis];
   }
 
   set sizes(values: number[] | null | undefined) {
@@ -330,15 +336,6 @@ export class SplitPaneRenderable extends BoxRenderable {
     return Math.max(0, content - this.gutters.length * gutterSize);
   }
 
-  private fitInitialSizes(available: number): void {
-    if (available > 0) {
-      this.sizesState = fitSizes(this.sizesState, available);
-      this.allocationBasis = [...this.sizesState];
-    } else {
-      this.sizesState = this.sizesState.map(() => 0);
-    }
-  }
-
   private handleLayoutResize(): void {
     const lastIndex = this.panes.length - 1;
     if (lastIndex < 0) return;
@@ -352,6 +349,7 @@ export class SplitPaneRenderable extends BoxRenderable {
     } else {
       this.sizesState = scaleSizes(this.allocationBasis, next);
     }
+    if (next > 0) this.initialSizesAreWeights = false;
     for (let index = 0; index < lastIndex; index++) this.applyBasis(index);
     this.resetActiveDragBasis();
     if (before.some((size, index) => size !== this.sizesState[index])) {
@@ -359,6 +357,17 @@ export class SplitPaneRenderable extends BoxRenderable {
         if (!this.isDestroyed) this.requestRender();
       });
       if (previous !== undefined) this.resizeCallback?.([...this.sizesState]);
+    }
+  }
+
+  private fitInitialSizes(available: number): void {
+    if (available > 0) {
+      this.sizesState = this.initialSizesAreWeights
+        ? scaleSizes(this.layoutWeights, available)
+        : fitSizes(this.sizesState, available);
+      this.allocationBasis = [...this.sizesState];
+    } else {
+      this.sizesState = this.sizesState.map(() => 0);
     }
   }
 

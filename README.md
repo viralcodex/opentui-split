@@ -111,6 +111,54 @@ effect, call `registerSplitPane()` once at startup.
 `gutterOptions` accepts `visible`, `color`, and direction-specific `glyphs`. A hidden gutter remains draggable too. It accepts the same fields when constructing a standalone gutter.</br>
 Runtime appearance and size updates reuse existing gutters.
 
+## Save and restore layouts
+
+> This restoration helper is for Core. React and Solid apps should render the descriptor through their own components.
+
+`captureLayout(pane)` returns a JSON-compatible `LayoutNode` containing nested
+split directions, pane IDs, order, and relative size weights. The library does
+not read or write files. Your app chooses the path and when to save:
+
+```typescript
+import { writeFile } from "node:fs/promises";
+import { captureLayout } from "opentui-split";
+
+await writeFile(layoutPath, JSON.stringify(captureLayout(outer), null, 2));
+```
+
+At startup, load the JSON and supply a function that creates each leaf pane:
+
+```typescript
+import { readFile } from "node:fs/promises";
+import { restoreLayout } from "opentui-split";
+
+const data = JSON.parse(await readFile(layoutPath, "utf8"));
+const restored = restoreLayout(renderer, data, (paneId) => createPane(paneId), {
+  width: "100%",
+  height: "100%",
+});
+renderer.root.add(restored);
+```
+
+The resolver must return a fresh, unattached `BoxRenderable` with the requested ID.
+Invalid layout data throws `TypeError` before any resolver calls.
+
+Restoring builds a new tree; it does not replace or destroy an existing layout.
+
+Weights adapt to the available terminal size on rendering. All-zero weights
+divide space equally. Capture after rendering to include the flexible last
+pane's actual size.
+
+Saving a collapsed split preserves its retained proportions.
+Core code can read these capture weights through `split.layoutWeights`.
+An empty split is supported. Pane reordering and size changes made before the
+first render are respected when restoring.
+
+The optional fourth argument supplies root split options; saved directions take
+precedence over `direction`, and weights take precedence over `sizes`. Nested
+splits use default styling and minimum sizes. Layout data excludes appearance,
+minimum sizes, focus, and widget state.
+
 ## Keyboard focus
 
 `createPaneNavigator` moves focus through visible focusable renderables with `Tab` and
@@ -183,6 +231,16 @@ bun examples/add-panes.ts
 
 It supports gutter resizing, `Tab` focus, pane creation/deletion,
 drag reordering and `Option`/`Alt` + arrow keys for reordering.
+
+To try layout persistence with a file path of your choice:
+
+```bash
+bun examples/save-layout.ts ./layout.json
+```
+
+Press `s` to save, `r` to reset, and `l` to load the saved layout.
+Restart the demo and press `l` to restore it in a new session. Without a path,
+the demo uses `examples/assets/layout.json`. Saving creates parent directories.
 
 ## License
 

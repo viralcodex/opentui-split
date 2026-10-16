@@ -12,6 +12,10 @@ import type { SplitPaneRenderable } from "./renderables/split-pane.js";
 
 export type SplitDirection = "horizontal" | "vertical";
 
+export type LayoutNode =
+  | { paneId: string }
+  | { direction: SplitDirection; weights: number[]; children: LayoutNode[] };
+
 export interface GutterGlyphs {
   horizontal?: string;
   vertical?: string;
