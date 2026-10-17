@@ -4,6 +4,7 @@ import type { GutterGlyphs } from "./models.js";
 export const DefaultPaneSize = 20;
 export const DefaultMinSize = 4;
 export const DefaultGutterColor = RGBA.fromInts(120, 200, 255);
+export const DefaultDropHighlightColor = RGBA.fromInts(250, 204, 21);
 export const DefaultGutterGlyphs: Required<GutterGlyphs> = {
   horizontal: "│",
   vertical: "─",

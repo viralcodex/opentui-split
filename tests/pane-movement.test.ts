@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { BoxRenderable, TextRenderable } from "@opentui/core";
+import { BoxRenderable, RGBA, TextRenderable } from "@opentui/core";
 import { createTestRenderer, MouseButtons, type TestRendererSetup } from "@opentui/core/testing";
 import { createPaneMovement, SplitPaneRenderable } from "../src/index.js";
 
@@ -170,6 +170,22 @@ describe("pane movement", () => {
     expect(left.getChildren()[1]).toBe(gutter);
     expect(left.sizes).toEqual(sizes);
     expect(swaps).toEqual([["a", "c"]]);
+  });
+
+  test("drag highlights the hovered pane and restores its border on drop", async () => {
+    const { panes } = await buildSplit();
+    const highlight = RGBA.fromInts(250, 204, 21);
+    expect(panes[2]!.border).toBe(false);
+    createPaneMovement(setup.renderer, { highlight });
+    await setup.renderOnce();
+
+    await setup.mockMouse.pressDown(center(panes[0]!, "x"), 5, MouseButtons.LEFT, CTRL);
+    await setup.mockMouse.moveTo(center(panes[2]!, "x"), 5, CTRL);
+    expect(panes[2]!.border).toBe(true);
+    expect(panes[2]!.borderColor.equals(highlight)).toBe(true);
+
+    await setup.mockMouse.release(center(panes[2]!, "x"), 5, MouseButtons.LEFT, CTRL);
+    expect(panes[2]!.border).toBe(false);
   });
 
   test("keyboard moves keep focus, support macOS aliases, and dispose", async () => {

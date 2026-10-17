@@ -5,7 +5,8 @@ import {
   type MouseEvent,
   type Renderable,
 } from "@opentui/core";
-import type { PaneDragDrop, PaneDragDropOptions } from "./models.js";
+import { DefaultDropHighlightColor } from "./constants.js";
+import type { HighlightedPane, PaneDragDrop, PaneDragDropOptions } from "./models.js";
 import {
   containsPoint,
   findPaneTarget,
@@ -26,14 +27,43 @@ export function createPaneDragDrop(
   const isPane = options.isPane ?? (() => true);
   const handle = options.handle;
   const cursor = options.cursor === undefined ? "move" : options.cursor;
+  const highlight = options.highlight ?? DefaultDropHighlightColor;
   const onReorder = options.onReorder;
   const onSwap = options.onSwap;
 
   let active: PaneTarget | null = null;
+  let currentHighlightedPane: HighlightedPane = null;
 
   const setCursor = (dragging: boolean): void => {
     if (!cursor) return;
     renderer.setMousePointer(dragging ? cursor : "default");
+    renderer.requestRender();
+  };
+
+  const clearHighlight = (): void => {
+    if (!currentHighlightedPane) return;
+    const { pane, border, borderColor, focusedBorderColor } = currentHighlightedPane;
+    if (!pane.isDestroyed) {
+      pane.borderColor = borderColor;
+      pane.focusedBorderColor = focusedBorderColor;
+      pane.border = border;
+    }
+    currentHighlightedPane = null;
+    renderer.requestRender();
+  };
+
+  const highlightPane = (pane: BoxRenderable | null): void => {
+    if (currentHighlightedPane?.pane === pane) return;
+    clearHighlight();
+    if (!highlight || !pane) return;
+    currentHighlightedPane = {
+      pane,
+      border: pane.border,
+      borderColor: pane.borderColor,
+      focusedBorderColor: pane.focusedBorderColor,
+    };
+    pane.borderColor = highlight;
+    pane.focusedBorderColor = highlight;
     renderer.requestRender();
   };
 
@@ -76,6 +106,7 @@ export function createPaneDragDrop(
     if (!active) return;
     const target = active;
     active = null;
+    clearHighlight();
     setCursor(false);
     if (!isVisibleInTree(target.pane) || target.pane.parent !== target.split) return;
 
@@ -90,11 +121,18 @@ export function createPaneDragDrop(
     }
   };
 
+  const highlightTargetPane = (event: MouseEvent): void => {
+    if (!active || !highlight) return;
+    const drop = paneTargetAtPoint(root, event.x, event.y, isPane);
+    highlightPane(drop && drop.pane !== active.pane ? drop.pane : null);
+  };
+
   let disposed = false;
   const processMouseEvent = root.processMouseEvent;
   const listener = function (this: Renderable, event: MouseEvent): void {
     if (!disposed) {
       if (event.type === "down") onDown(event);
+      if (event.type === "drag") highlightTargetPane(event);
       if (event.type === "up" || event.type === "drag-end") onDrop(event);
     }
     processMouseEvent.call(this, event);
@@ -107,6 +145,7 @@ export function createPaneDragDrop(
     },
     dispose: () => {
       disposed = true;
+      clearHighlight();
       if (root.processMouseEvent === listener) root.processMouseEvent = processMouseEvent;
       if (active) setCursor(false);
       active = null;

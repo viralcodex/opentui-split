@@ -75,6 +75,7 @@ export interface PaneMovementOptions {
   isPane?: PanePredicate;
   handle?: (target: Renderable, pane: BoxRenderable) => boolean;
   cursor?: MousePointerStyle | false;
+  highlight?: RGBA | string | false;
   keymap?: PaneReorderKeymap | false;
   onReorder?: PaneReorderCallback;
   onSwap?: PaneSwapCallback;
@@ -87,6 +88,16 @@ export interface PaneMovement {
 }
 
 export type PaneDragDropOptions = Omit<PaneMovementOptions, "keymap">;
-export type PaneReorderOptions = Omit<PaneMovementOptions, "modifier" | "handle" | "cursor">;
+export type PaneReorderOptions = Omit<
+  PaneMovementOptions,
+  "modifier" | "handle" | "cursor" | "highlight"
+>;
 export type PaneDragDrop = Pick<PaneMovement, "dragging" | "dispose">;
 export type PaneReorder = Pick<PaneMovement, "move" | "dispose">;
+
+export type HighlightedPane = {
+  pane: BoxRenderable;
+  border: BoxRenderable["border"];
+  borderColor: RGBA;
+  focusedBorderColor: RGBA;
+} | null;

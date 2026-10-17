@@ -198,22 +198,25 @@ const movement = createPaneMovement(renderer, {
 });
 ```
 
-| Option      | Type                                                                     | Default       | Description                                                     |
-| ----------- | ------------------------------------------------------------------------ | ------------- | --------------------------------------------------------------- |
-| `root`      | `Renderable`                                                             | Renderer root | Subtree whose panes can move.                                   |
-| `modifier`  | `"ctrl" \| "alt" \| "shift"` \| `false`                                  | `"ctrl"`      | Required drag key. `false` allows any drag.                     |
-| `handle`    | `(target, pane) => boolean`                                              | Whole pane    | Restricts where a drag can begin.                               |
-| `cursor`    | `"default" \| "pointer" \| "move" \| "crosshair" \| ...` \| `false`      | `"move"`      | Mouse pointer shown while dragging. `false` keeps it unchanged. |
-| `keymap`    | `(event) => "left" \| "right" \| "up" \| "down" \| undefined` \| `false` | Alt + arrow   | Maps keys or disables keyboard handling.                        |
-| `isPane`    | `(pane) => boolean`                                                      | Any pane      | Selects movable panes.                                          |
-| `onReorder` | `(split, from, to) => void`                                              | None          | Runs after an in-split move.                                    |
-| `onSwap`    | `(first, second) => void`                                                | None          | Runs after panes exchange places across splits.                 |
+| Option      | Type                                                                     | Default       | Description                                                                     |
+| ----------- | ------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------- |
+| `root`      | `Renderable`                                                             | Renderer root | Subtree whose panes can move.                                                   |
+| `modifier`  | `"ctrl" \| "alt" \| "shift"` \| `false`                                  | `"ctrl"`      | Required drag key. `false` allows any drag.                                     |
+| `handle`    | `(target, pane) => boolean`                                              | Whole pane    | Restricts where a drag can begin.                                               |
+| `cursor`    | `"default" \| "pointer" \| "move" \| "crosshair" \| ...` \| `false`      | `"move"`      | Mouse pointer shown while dragging. `false` keeps it unchanged.                 |
+| `highlight` | `RGBA \| string` \| `false`                                              | Amber         | Border color of the pane under the pointer while dragging. `false` disables it. |
+| `keymap`    | `(event) => "left" \| "right" \| "up" \| "down" \| undefined` \| `false` | Alt + arrow   | Maps keys or disables keyboard handling.                                        |
+| `isPane`    | `(pane) => boolean`                                                      | Any pane      | Selects movable panes.                                                          |
+| `onReorder` | `(split, from, to) => void`                                              | None          | Runs after an in-split move.                                                    |
+| `onSwap`    | `(first, second) => void`                                                | None          | Runs after panes exchange places across splits.                                 |
 
 Some terminals do not report modifier keys during mouse drags. Set `modifier`
 to `false` and use a `handle` there. Create one movement controller per root; it
 preserves `root.onMouse` and specific handlers such as `onMouseDown`, including
 handlers assigned after controller creation. Hidden panes are excluded from
 movement. A drag is cancelled if its pane is hidden or detached before release.
+
+While dragging, the pane under the pointer has its border highlighted. A borderless pane shows a temporary border for the preview, and set to its original state on release.
 
 Call `move(direction)` for manual keyboard movement and `dispose()` to unbind
 mouse and keyboard handling. Core code can use `split.movePane(pane, toIndex)`
