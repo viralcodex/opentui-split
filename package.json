@@ -60,9 +60,9 @@
     "prepublishOnly": "bun run check && bun run build && bun run test:dist"
   },
   "devDependencies": {
-    "@opentui/core": "^0.6.6",
-    "@opentui/react": "^0.6.6",
-    "@opentui/solid": "^0.6.6",
+    "@opentui/core": "^0.8.1",
+    "@opentui/react": "^0.8.1",
+    "@opentui/solid": "^0.8.1",
     "@types/bun": "^1.4.0",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.0",
@@ -75,9 +75,9 @@
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@opentui/core": "^0.6.6",
-    "@opentui/react": "^0.6.6",
-    "@opentui/solid": "^0.6.6"
+    "@opentui/core": "^0.8.1",
+    "@opentui/react": "^0.8.1",
+    "@opentui/solid": "^0.8.1"
   },
   "peerDependenciesMeta": {
     "@opentui/react": {
