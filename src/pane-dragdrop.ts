@@ -7,6 +7,7 @@ import {
 } from "@opentui/core";
 import { DefaultDropHighlightColor } from "./constants.js";
 import type { HighlightedPane, PaneDragDrop, PaneDragDropOptions } from "./models.js";
+import { SplitPaneRenderable } from "./renderables/split-pane.js";
 import {
   containsPoint,
   findPaneTarget,
@@ -95,7 +96,11 @@ export function createPaneDragDrop(
   const onDown = (event: MouseEvent): void => {
     active = null;
     if (event.button !== MouseButton.LEFT || !modifierHeld(event)) return;
-    const grab = findPaneTarget(event.target, root, isPane);
+    const grab =
+      findPaneTarget(event.target, root, isPane) ??
+      (event.target instanceof SplitPaneRenderable
+        ? paneTargetAtPoint(root, event.x, event.y, isPane)
+        : null);
     if (grab && handleAllows(event.target, grab.pane)) {
       active = grab;
       setCursor(true);

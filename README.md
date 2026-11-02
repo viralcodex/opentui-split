@@ -5,7 +5,7 @@ Core, React, and Solid exports.
 
 ## Install
 
-Requires OpenTUI 0.6.6 or later within 0.6.x, with Bun 1.3.14+ or Node.js 26.4.0+.
+Requires OpenTUI 0.8.1 or later within 0.8.x, with Bun 1.3.14+ or Node.js 26.4.0+.
 When using Node.js, launch your app with `node --experimental-ffi`.
 For OpenTUI 0.5.x, use opentui-split 0.3.x.
 
